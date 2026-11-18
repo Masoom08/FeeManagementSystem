@@ -1,0 +1,299 @@
+import { useEffect, useMemo, useState } from 'react'
+import { Icon } from '../../../components/ui/AppIcon'
+import { studentFeeRecords, type SemesterFee, type StudentFeeRecord, type StudentFeeStatus } from '../../../data/mockData'
+import { api, type ApiAcademicYear, type ApiReceipt, type ApiSemester, type ApiStudentSummary } from '../../../api/client'
+import { InvoiceTemplate } from '../../payments/components/InvoiceTemplate'
+import './StudentFeeManagement.css'
+
+type StatusFilter = 'All' | StudentFeeStatus
+type StudentFeeManagementProps = { onNotice: (message: string) => void; view: 'students' | 'reminders'; onAddStudent?: () => void; refreshKey?: number }
+type ReminderLog = { id: string; name: string; registrationNo: string; phone: string; course: string; semester: string; createdAt: string; message: string }
+type ReminderBatch = { id: string; recipients: number; course: string; semester: string; createdAt: string; message: string }
+type LiveStudentFeeRecord = StudentFeeRecord & { apiStudentId: number; academicAccountId: number }
+type FeeRow = LiveStudentFeeRecord & SemesterFee
+const reminderHistoryKey = 'iccmrt-reminder-history'
+const reminderMessage = 'Dear student, our records show an outstanding current semester fee balance. Please contact the accounts office or complete your payment. If you have already paid, kindly ignore this message.'
+const demoCourses = ['BBA (LU)', 'B.Com (Hons.)', 'MBA (AKTU)', 'BBA (AKTU)']
+
+const currency = new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 })
+
+function toFeeRecord(student: ApiStudentSummary, years: ApiAcademicYear[], semesters: ApiSemester[]): LiveStudentFeeRecord {
+  const year = years.find(item => item.id === student.academicYearId)
+  const academicAccounts = student.accounts.filter(account => account.product === 'ACADEMIC')
+  const semesterFees: SemesterFee[] = semesters.flatMap(semester => {
+    const lines = academicAccounts.flatMap(account => account.lines).filter(line => line.semesterId === semester.id && line.bucket === 'DUES')
+    if (!lines.length) return []
+    const feeDue = lines.filter(line => line.direction === 'INCREASE').reduce((sum, line) => sum + line.amount, 0)
+    const balance = Math.max(0, lines.reduce((sum, line) => sum + (line.direction === 'INCREASE' ? line.amount : -line.amount), 0))
+    const paid = Math.max(0, feeDue - balance)
+    const payment = lines.filter(line => line.entryType === 'PAYMENT' && line.direction === 'DECREASE').at(-1)
+    const label = years.find(item => item.id === semester.academicYearId)?.label
+    return [{ semester: `${semester.name}${label ? ` (${label})` : ''}`, feeDue, amountPaid: paid, paymentDate: payment?.effectiveDate ?? null, dueDate: semester.dueDate, status: (balance === 0 ? 'Paid' : 'Unpaid') as StudentFeeStatus }]
+  })
+  const firstFee = semesterFees[0] ?? { semester: 'No assessed semester', feeDue: 0, amountPaid: 0, paymentDate: null, dueDate: '', status: 'Unpaid' as const }
+  const startDate = year?.startDate.slice(0, 4) ?? ''
+  const endDate = year?.endDate.slice(0, 4) ?? ''
+  return { apiStudentId: student.id, academicAccountId: academicAccounts[0]?.id ?? 0, name: student.name, registrationNo: student.registrationNumber, phone: student.phoneNumber, course: student.course.courseName, batch: year?.label ?? String(student.academicYearId), studyYear: student.studyYear, startDate, endDate, semesterFees, ...firstFee, lateFee: 0 }
+}
+
+async function loadStudentRoster() {
+  const [students, years, semesters, courses] = await Promise.all([api.students(), api.academicYears(), api.semesters(), api.courses()])
+  return { records: students.map(student => toFeeRecord(student, years, semesters)), courses: courses.map(item => item.courseName) }
+}
+
+function toReminderLogs(rows: Awaited<ReturnType<typeof api.reminders>>, students: LiveStudentFeeRecord[]): ReminderLog[] {
+  return rows.flatMap(row => row.reminders.map(reminder => {
+    const student = students.find(item => item.apiStudentId === row.studentId)
+    return {
+      id: String(reminder.id), name: row.name, registrationNo: row.registrationNumber,
+      phone: student?.phone ?? '', course: student?.course ?? '—', semester: 'All semesters',
+      createdAt: reminder.sentAt,
+      message: `${reminder.channel} reminder recorded. Outstanding balance: ${currency.format(row.duesOutstanding)}.`,
+    }
+  })).sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+}
+
+function getReminderRecipients(course: string, semester: string) {
+  return studentFeeRecords.flatMap(student => {
+    if (course !== 'All courses' && student.course !== course) return []
+    const fee = semester === 'All semesters'
+      ? student.semesterFees[(student.studyYear - 1) * 2]
+      : student.semesterFees.find(item => item.semester === semester)
+    return fee?.status === 'Unpaid' ? [{ student, semester: fee.semester }] : []
+  })
+}
+
+function localDateKey(value: string) {
+  const date = new Date(value)
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
+}
+
+function currentDateTime() {
+  const now = new Date()
+  return {
+    date: `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`,
+  }
+}
+
+function restoreReminderHistory(): ReminderLog[] {
+  try {
+    const saved = JSON.parse(localStorage.getItem(reminderHistoryKey) ?? '[]') as Array<ReminderLog | ReminderBatch>
+    return saved.flatMap(entry => {
+      if ('name' in entry) return [entry]
+      return getReminderRecipients(entry.course, entry.semester).slice(0, entry.recipients).map(({ student, semester }) => ({
+        id: `${entry.id}-${student.registrationNo}`,
+        name: student.name,
+        registrationNo: student.registrationNo,
+        phone: student.phone,
+        course: student.course,
+        semester,
+        createdAt: entry.createdAt,
+        message: entry.message,
+      }))
+    })
+  } catch {
+    return []
+  }
+}
+
+function csvCell(value: string | number) {
+  const safe = String(value).replace(/^[=+@-]/, "'$&")
+  return `"${safe.replaceAll('"', '""')}"`
+}
+
+function exportStudents(rows: StudentFeeRecord[], status: StatusFilter) {
+  const heading = ['Student name', 'Registration number', 'Phone', 'Course', 'Batch', 'Study year', 'Start year', 'End year', 'Semester', 'Semester fee', 'Amount paid', 'Payment date', 'Balance due', 'Due date', 'Fee status']
+  const records = rows.map(student => [
+    student.name,
+    student.registrationNo,
+    student.phone,
+    student.course,
+    student.batch,
+    `Year ${student.studyYear}`,
+    student.startDate.slice(-4),
+    student.endDate.slice(-4),
+    student.semester,
+    student.feeDue,
+    student.amountPaid,
+    student.paymentDate ?? '-',
+    Math.max(0, student.feeDue - student.amountPaid),
+    student.dueDate,
+    student.status,
+  ])
+  const csv = [heading, ...records].map(row => row.map(csvCell).join(',')).join('\r\n')
+  const blob = new Blob(['\uFEFF', csv], { type: 'text/csv;charset=utf-8' })
+  const url = URL.createObjectURL(blob)
+  const link = document.createElement('a')
+  link.href = url
+  link.download = `ICCMRT-${status.toLowerCase()}-students-${new Date().toISOString().slice(0, 10)}.csv`
+  document.body.append(link)
+  link.click()
+  link.remove()
+  URL.revokeObjectURL(url)
+}
+
+export function StudentFeeManagement({ onNotice, view, onAddStudent, refreshKey = 0 }: StudentFeeManagementProps) {
+  const [apiRecords, setApiRecords] = useState<LiveStudentFeeRecord[]>([])
+  const [apiCourses, setApiCourses] = useState<string[]>([])
+  const [loadingStudents, setLoadingStudents] = useState(true)
+  const [studentApiError, setStudentApiError] = useState('')
+  const [course, setCourse] = useState('All courses')
+  const [batch, setBatch] = useState('All batches')
+  const [studyYear, setStudyYear] = useState('All years')
+  const [semester, setSemester] = useState('All semesters')
+  const [status, setStatus] = useState<StatusFilter>('All')
+  const [query, setQuery] = useState('')
+  const [reminderQuery, setReminderQuery] = useState('')
+  const [reminderDate, setReminderDate] = useState('')
+  const [reminderCourse, setReminderCourse] = useState('All courses')
+  const [reminderSemester, setReminderSemester] = useState('All semesters')
+  const [smsOpen, setSmsOpen] = useState(false)
+  const [cashStudent, setCashStudent] = useState<Pick<FeeRow, 'apiStudentId' | 'academicAccountId' | 'name' | 'registrationNo' | 'semester' | 'feeDue' | 'amountPaid'> | null>(null)
+  const [cashDate, setCashDate] = useState('')
+  const [cashPaymentKey, setCashPaymentKey] = useState('')
+  const [cashAmount, setCashAmount] = useState('')
+  const [savingPayment, setSavingPayment] = useState(false)
+  const [receipt, setReceipt] = useState<ApiReceipt | null>(null)
+  const [savingReminders, setSavingReminders] = useState(false)
+  const [expandedReminder, setExpandedReminder] = useState<string | null>(null)
+  const [reminderHistory, setReminderHistory] = useState<ReminderLog[]>(restoreReminderHistory)
+
+  useEffect(() => {
+    let active = true
+    loadStudentRoster()
+      .then(({ records, courses }) => {
+        if (!active) return
+        setApiRecords(records)
+        setApiCourses(courses)
+        setLoadingStudents(false)
+        api.reminders().then(rows => { if (active) setReminderHistory(toReminderLogs(rows, records)) }).catch(() => undefined)
+      })
+      .catch(error => {
+        if (!active) return
+        setStudentApiError(error instanceof Error ? error.message : 'Could not load students')
+        setLoadingStudents(false)
+      })
+    return () => { active = false }
+  }, [refreshKey])
+
+  useEffect(() => {
+    localStorage.setItem(reminderHistoryKey, JSON.stringify(reminderHistory))
+  }, [reminderHistory])
+
+  const courseRows = useMemo<FeeRow[]>(() => apiRecords.filter(student =>
+    (course === 'All courses' || student.course === course) &&
+    (batch === 'All batches' || String(student.batch) === batch) &&
+    (studyYear === 'All years' || student.studyYear === Number(studyYear)) &&
+    (semester === 'All semesters' || student.semesterFees.some(item => item.semester === semester)) &&
+    `${student.name} ${student.registrationNo}`.toLowerCase().includes(query.toLowerCase()),
+  ).flatMap(student => {
+    const fee = semester === 'All semesters' ? student.semesterFees.at(-1) : student.semesterFees.find(item => item.semester === semester)
+    if (!fee) return []
+    return [{ ...student, ...fee }]
+  }), [apiRecords, course, batch, studyYear, semester, query])
+  const courses = apiCourses.length ? apiCourses : demoCourses
+  const batches = Array.from(new Set(apiRecords.map(student => String(student.batch)))).sort((a, b) => b.localeCompare(a))
+  const paidCount = courseRows.filter(student => student.status === 'Paid').length
+  const unpaidRows = courseRows.filter(student => student.status === 'Unpaid')
+  const visibleRows = status === 'All' ? courseRows : courseRows.filter(student => student.status === status)
+  const outstanding = unpaidRows.reduce((total, student) => total + Math.max(0, student.feeDue - student.amountPaid), 0)
+  const visibleReminders = reminderHistory.filter(item =>
+    `${item.name} ${item.phone} ${item.registrationNo} ${item.createdAt}`.toLowerCase().includes(reminderQuery.trim().toLowerCase()) &&
+    (!reminderDate || localDateKey(item.createdAt) === reminderDate) &&
+    (reminderCourse === 'All courses' || item.course === reminderCourse) &&
+    (reminderSemester === 'All semesters' || item.semester === reminderSemester),
+  )
+  const hasReminderFilters = Boolean(reminderQuery || reminderDate || reminderCourse !== 'All courses' || reminderSemester !== 'All semesters')
+
+  const recordReminderBatch = async () => {
+    const studentIds = [...new Set(unpaidRows.map(student => student.apiStudentId))]
+    if (!studentIds.length) return
+    setSavingReminders(true)
+    try {
+      const result = await api.createReminders(studentIds, ['SMS'], 'frontend-admin', reminderMessage)
+      setSmsOpen(false)
+      onNotice(`${result.sent.length} SMS reminder${result.sent.length === 1 ? '' : 's'} accepted by the gateway${result.failed.length ? `; ${result.failed.length} failed` : ''}.`)
+      api.reminders().then(rows => setReminderHistory(toReminderLogs(rows, apiRecords))).catch(() => undefined)
+    } catch (error) {
+      onNotice(error instanceof Error ? `Could not save reminder requests: ${error.message}` : 'Could not save reminder requests.')
+    } finally {
+      setSavingReminders(false)
+    }
+  }
+
+  const saveCashPayment = async () => {
+    if (!cashStudent || !cashStudent.academicAccountId || !cashDate || !Number(cashAmount)) return
+    setSavingPayment(true)
+    try {
+      const payment = await api.createPayment({
+        idempotencyKey: cashPaymentKey,
+        actedBy: 'frontend-admin',
+        paidOn: cashDate,
+        allocations: [{ feeAccountId: cashStudent.academicAccountId, bucket: 'DUES', amount: Number(cashAmount) }],
+      })
+      setCashStudent(null)
+      onNotice(`Cash payment of ${currency.format(Number(cashAmount))} saved to the fee account.`)
+      try {
+        setReceipt(await api.receipt(payment.id))
+      } catch {
+        onNotice('Payment saved, but its receipt could not be loaded. You can retry from the payment record.')
+      }
+      loadStudentRoster().then(roster => { setApiRecords(roster.records); setApiCourses(roster.courses) }).catch(() => onNotice('Payment was saved, but the roster could not be refreshed. Reload the page to see the latest balance.'))
+    } catch (error) {
+      onNotice(error instanceof Error ? `Could not record payment: ${error.message}` : 'Could not record payment.')
+    } finally {
+      setSavingPayment(false)
+    }
+  }
+
+  return <section className="student-management" aria-labelledby="student-fee-title">
+    <div className="student-page-heading">
+      {view === 'reminders'
+        ? <div><div className="eyebrow">STUDENT ACCOUNTS</div><h1 id="student-fee-title">Reminder history</h1><p>Recent SMS reminder batches prepared from this dashboard</p></div>
+        : <div><div className="eyebrow">STUDENT ACCOUNTS · LIVE ROSTER</div><h1 id="student-fee-title">Student fee status</h1><p>Student details and fee balances from the connected API.</p></div>}
+      {view === 'students' && <div className="student-page-actions">{onAddStudent && <button className="secondary-button" onClick={onAddStudent}><Icon name="plus" size={17}/> Add student</button>}<button className="primary-button reminder-button" onClick={() => setSmsOpen(true)} disabled={unpaidRows.length === 0}><Icon name="bell" size={19}/> Send SMS reminders <span>{unpaidRows.length}</span></button></div>}
+    </div>
+
+    {view === 'students' && <>
+    {loadingStudents && <div className="student-empty" role="status">Loading students and fee balances…</div>}
+    {studentApiError && <div className="student-empty" role="alert">Could not load the student list: {studentApiError}. Check VITE_API_BASE_URL and the API server.</div>}
+    <div className="student-summary-grid" aria-label="Filtered student fee totals">
+      <article className="student-summary-card"><span className="summary-symbol summary-all"><Icon name="users" size={21}/></span><div><span>Students in view</span><strong>{courseRows.length}</strong></div></article>
+      <article className="student-summary-card"><span className="summary-symbol summary-paid"><Icon name="check" size={21}/></span><div><span>Semester fee paid</span><strong>{paidCount}</strong></div></article>
+      <article className="student-summary-card"><span className="summary-symbol summary-unpaid"><Icon name="clock" size={21}/></span><div><span>Semester fee unpaid</span><strong>{unpaidRows.length}</strong></div></article>
+      <article className="student-summary-card"><span className="summary-symbol summary-balance"><Icon name="wallet" size={21}/></span><div><span>Outstanding balance</span><strong>{currency.format(outstanding)}</strong></div></article>
+    </div>
+
+    <div className="panel student-list-panel">
+      <div className="student-list-title"><div><h2>Student list & semester fees</h2><p>Fee status for the selected semester · fees shown in INR</p></div></div>
+      <div className="student-filter-row">
+        <label className="student-filter search-filter"><span>Search student</span><div><Icon name="search" size={18}/><input value={query} onChange={event => setQuery(event.target.value)} placeholder="Name or registration no."/></div></label>
+        <label className="student-filter"><span>Batch / academic year</span><select value={batch} onChange={event => setBatch(event.target.value)}><option>All batches</option>{batches.map(item => <option key={item} value={item}>{item}</option>)}</select></label>
+        <label className="student-filter"><span>Study year</span><select value={studyYear} onChange={event => setStudyYear(event.target.value)}><option>All years</option><option value="1">Year 1</option><option value="2">Year 2</option><option value="3">Year 3</option></select></label>
+        <label className="student-filter"><span>Course</span><select value={course} onChange={event => setCourse(event.target.value)}><option>All courses</option>{courses.map(item => <option key={item}>{item}</option>)}</select></label>
+        <label className="student-filter"><span>Semester fee status</span><select value={semester} onChange={event => setSemester(event.target.value)}><option>All semesters</option>{Array.from(new Set(apiRecords.flatMap(student => student.semesterFees.map(item => item.semester)))).sort().map(item => <option key={item}>{item}</option>)}</select></label>
+        <label className="student-filter"><span>Fee status</span><select value={status} onChange={event => setStatus(event.target.value as StatusFilter)}><option>All</option><option>Paid</option><option>Unpaid</option></select></label>
+      </div>
+
+      <div className="student-export-row"><div className="export-caption download-caption"><Icon name="download" size={18}/><span>Download an Excel-compatible list</span></div><div className="export-buttons"><button className="export-all" onClick={() => exportStudents(courseRows, 'All')}><span>All</span><small>{courseRows.length}</small></button><button className="export-paid" onClick={() => exportStudents(courseRows.filter(student => student.status === 'Paid'), 'Paid')}><span>Paid</span><small>{paidCount}</small></button><button className="export-unpaid" onClick={() => exportStudents(unpaidRows, 'Unpaid')}><span>Unpaid</span><small>{unpaidRows.length}</small></button></div></div>
+
+      <div className="student-table-wrap"><table className="student-fee-table"><thead><tr><th>REGISTRATION NO.</th><th>STUDENT</th><th>BATCH</th><th>COURSE</th><th>YEAR</th><th>PERIOD (YEARS)</th><th>SEMESTER</th><th>SEMESTER FEE</th><th>PAID</th><th>PAYMENT DATE</th><th>BALANCE</th><th>STATUS</th><th>ACTION</th></tr></thead><tbody>
+        {visibleRows.map(student => {
+          const balance = Math.max(0, student.feeDue - student.amountPaid)
+          return <tr key={student.registrationNo}><td>{student.registrationNo}</td><td><div className="student-cell"><span><strong>{student.name}</strong><small>{student.phone}</small></span></div></td><td>{student.batch}</td><td>{student.course}</td><td>Year {student.studyYear}</td><td>{student.startDate.slice(-4)} - {student.endDate.slice(-4)}</td><td>{student.semester}</td><td className="amount-cell">{currency.format(student.feeDue)}</td><td>{currency.format(student.amountPaid)}</td><td>{student.paymentDate ?? '-'}</td><td className={balance > 0 ? 'balance-due' : 'amount-cell'}>{currency.format(balance)}</td><td><span className={`status status-${student.status.toLowerCase()}`}><i/>{student.status}</span></td><td>{balance > 0 ? <button className="cash-payment-button" onClick={() => { const now = currentDateTime(); setCashStudent(student); setCashDate(now.date); setCashPaymentKey(crypto.randomUUID()); setCashAmount(String(balance)) }}>Record cash</button> : <span className="cash-paid-label">Paid in full</span>}</td></tr>
+        })}
+      </tbody></table>{visibleRows.length === 0 && <div className="student-empty">{loadingStudents ? 'Loading students…' : 'No students match the selected filters.'}</div>}</div>
+      <div className="student-list-footer"><span>Showing <strong>{visibleRows.length}</strong> of <strong>{courseRows.length}</strong> matching students</span><span>Fee due date: <strong>{visibleRows[0]?.dueDate ?? 'varies by semester'}</strong></span></div>
+    </div>
+    </>}
+
+    {view === 'reminders' && <section className="panel reminder-history" aria-label="Prepared reminder messages"><div className="reminder-history-heading"><div><h2>Reminder messages</h2><p>Open a message to see its full text and recipient details.</p></div><span className="history-count">{hasReminderFilters ? `${visibleReminders.length} of ${reminderHistory.length} messages` : `${reminderHistory.length} ${reminderHistory.length === 1 ? 'message' : 'messages'}`}</span></div><div className="reminder-filters"><label className="reminder-search"><Icon name="search" size={17}/><input value={reminderQuery} onChange={event => setReminderQuery(event.target.value)} placeholder="Search name, phone, or registration no." aria-label="Search reminders by student name, phone, registration number, or date"/>{reminderQuery && <button type="button" onClick={() => setReminderQuery('')} aria-label="Clear reminder search">×</button>}</label><label className="reminder-filter"><span>Date</span><input type="date" value={reminderDate} onChange={event => setReminderDate(event.target.value)} aria-label="Filter reminders by date"/></label><label className="reminder-filter"><span>Course</span><select value={reminderCourse} onChange={event => setReminderCourse(event.target.value)}><option>All courses</option>{Array.from(new Set(reminderHistory.map(item => item.course))).sort().map(item => <option key={item}>{item}</option>)}</select></label><label className="reminder-filter"><span>Semester</span><select value={reminderSemester} onChange={event => setReminderSemester(event.target.value)}><option>All semesters</option>{Array.from(new Set(reminderHistory.map(item => item.semester))).sort((a, b) => Number(a.replace(/\D/g, '')) - Number(b.replace(/\D/g, ''))).map(item => <option key={item}>{item}</option>)}</select></label>{hasReminderFilters && <button className="reminder-clear-filters" onClick={() => { setReminderQuery(''); setReminderDate(''); setReminderCourse('All courses'); setReminderSemester('All semesters') }}>Clear filters</button>}</div>
+      {reminderHistory.length === 0 ? <div className="history-empty"><span className="history-empty-icon"><Icon name="bell" size={20}/></span><div><strong>No reminders yet</strong><p>Each prepared reminder will appear here with its recipient and message.</p></div></div> : visibleReminders.length === 0 ? <div className="history-empty"><span className="history-empty-icon"><Icon name="search" size={20}/></span><div><strong>No matching students</strong><p>Try another name, mobile number, or registration number.</p></div></div> : <div className="history-list">{visibleReminders.map(item => <article className={`history-message${expandedReminder === item.id ? ' is-expanded' : ''}`} key={item.id}><button className="history-row" aria-expanded={expandedReminder === item.id} onClick={() => setExpandedReminder(current => current === item.id ? null : item.id)}><span className="history-avatar">{item.name.split(/\s+/).map(part => part[0]).slice(0, 2).join('').toUpperCase()}</span><span className="history-row-main"><span className="history-row-top"><strong>{item.name}</strong><span className="history-row-date">{new Date(item.createdAt).toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' })}</span></span><span className="history-row-meta">To: {item.phone} · {item.registrationNo} · {item.course} · {item.semester}</span><span className="history-row-preview">{item.message}</span></span></button>{expandedReminder === item.id && <div className="history-details"><dl><div><dt>Recipient</dt><dd>{item.name}</dd></div><div><dt>Mobile number</dt><dd>{item.phone}</dd></div><div><dt>Registration number</dt><dd>{item.registrationNo}</dd></div><div><dt>Course and semester</dt><dd>{item.course} · {item.semester}</dd></div><div><dt>Prepared</dt><dd>{new Date(item.createdAt).toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' })}</dd></div></dl><div className="history-message-body"><span>FULL MESSAGE</span><p>{item.message}</p></div></div>}</article>)}</div>}
+    </section>}
+
+    {smsOpen && <div className="modal-backdrop" role="presentation" onMouseDown={event => { if (event.target === event.currentTarget) setSmsOpen(false) }}><section className="sms-modal" role="dialog" aria-modal="true" aria-labelledby="sms-title"><div className="sms-modal-icon"><Icon name="bell" size={23}/></div><button className="modal-close" aria-label="Close" onClick={() => setSmsOpen(false)}>×</button><h2 id="sms-title">Remind unpaid students</h2><p className="sms-count">{unpaidRows.length} students · {course === 'All courses' ? 'all courses' : course} · {semester === 'All semesters' ? 'all semesters' : semester}</p><div className="sms-preview"><span>MESSAGE PREVIEW</span><p>{reminderMessage}</p></div><p className="sms-prototype-note">Sending submits this message to the configured SMS gateway for the selected students.</p><div className="sms-modal-actions"><button className="secondary-button" onClick={() => setSmsOpen(false)}>Cancel</button><button className="primary-button" onClick={() => void recordReminderBatch()} disabled={savingReminders}>{savingReminders ? 'Sending…' : 'Send SMS reminders'}</button></div></section></div>}
+    {cashStudent && <div className="modal-backdrop" role="presentation" onMouseDown={event => { if (event.target === event.currentTarget) setCashStudent(null) }}><section className="sms-modal cash-payment-modal" role="dialog" aria-modal="true" aria-labelledby="cash-payment-title"><div className="sms-modal-icon cash-modal-icon"><Icon name="wallet" size={23}/></div><button className="modal-close" aria-label="Close" onClick={() => setCashStudent(null)}>×</button><h2 id="cash-payment-title">Record cash payment</h2><p className="sms-count">{cashStudent.name} · {cashStudent.registrationNo} · {cashStudent.semester}</p><div className="cash-balance-note">Remaining balance: <strong>{currency.format(Math.max(0, cashStudent.feeDue - cashStudent.amountPaid))}</strong></div><div className="cash-payment-fields"><label><span>Amount received (INR)</span><input type="number" min="1" max={Math.max(0, cashStudent.feeDue - cashStudent.amountPaid)} step="1" value={cashAmount} onChange={event => setCashAmount(event.target.value)} required/></label><label><span>Payment date</span><input type="date" value={cashDate} onChange={event => setCashDate(event.target.value)} required/></label><label><span>Payment method</span><input value="Cash" readOnly/></label></div><p className="cash-payment-note">Saving this entry updates the student’s paid amount, balance, and fee status.</p><div className="sms-modal-actions"><button className="secondary-button" onClick={() => setCashStudent(null)}>Cancel</button><button className="primary-button" disabled={!Number(cashAmount) || Number(cashAmount) <= 0 || Number(cashAmount) > cashStudent.feeDue - cashStudent.amountPaid || !cashDate || savingPayment} onClick={() => void saveCashPayment()}>{savingPayment ? 'Saving…' : 'Save payment'}</button></div></section></div>}
+    {receipt && <InvoiceTemplate receipt={receipt} onClose={() => setReceipt(null)}/>}
+  </section>
+}
+

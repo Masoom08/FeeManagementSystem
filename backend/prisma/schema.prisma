@@ -1,0 +1,289 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+enum Affiliation {
+  AKTU
+  LU
+}
+
+enum AdmissionType {
+  DIRECT
+  COUNSELLING
+}
+
+enum StudentStatus {
+  ACTIVE
+  LEFT
+  COMPLETED
+}
+
+enum FeeProduct {
+  ACADEMIC
+  HOSTEL
+}
+
+enum FeeComponent {
+  ACADEMIC_FEE
+  ACADEMIC_CAUTION
+  HOSTEL_FEE
+  HOSTEL_SECURITY
+}
+
+enum LedgerBucket {
+  DUES
+  DEPOSIT
+}
+
+enum LedgerEntryType {
+  ASSESSMENT
+  PAYMENT
+  FINE
+  WAIVER
+  REFUND
+  ADJUSTMENT
+  DEDUCTION
+}
+
+enum LedgerDirection {
+  INCREASE
+  DECREASE
+}
+
+enum PaymentMethod {
+  HDFC
+  CHALLAN
+  CASH
+  MOCK
+}
+
+enum PaymentStatus {
+  PENDING
+  SUCCESS
+  FAILED
+}
+
+enum ReminderChannel {
+  SMS
+  WHATSAPP
+}
+
+enum ImportBatchStatus {
+  PREVIEW
+  COMMITTED
+}
+
+enum UserRole {
+  TEACHER
+  SUPERADMIN
+}
+
+model User {
+  id           Int      @id @default(autoincrement())
+  email        String   @unique @db.VarChar(120)
+  passwordHash String   @map("password_hash") @db.VarChar(255)
+  role         UserRole
+  active       Boolean  @default(true)
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  @@map("users")
+}
+
+model Course {
+  id            Int            @id @default(autoincrement())
+  courseCode    String         @unique @map("course_code") @db.VarChar(20)
+  courseName    String         @map("course_name") @db.VarChar(120)
+  affiliation   Affiliation
+  lateFeePerDay Int            @map("late_fee_per_day")
+  active        Boolean        @default(true)
+  students      Student[]
+  feeStructures FeeStructure[]
+
+  @@map("courses")
+}
+
+model AcademicYear {
+  id            Int            @id @default(autoincrement())
+  label         String         @unique @db.VarChar(20)
+  startDate     DateTime       @map("start_date") @db.Date
+  endDate       DateTime       @map("end_date") @db.Date
+  semesters     Semester[]
+  feeStructures FeeStructure[]
+  feeAccounts   FeeAccount[]
+  students      Student[]
+
+  @@map("academic_years")
+}
+
+model Semester {
+  id             Int            @id @default(autoincrement())
+  academicYearId Int            @map("academic_year_id")
+  name           String         @db.VarChar(40)
+  dueDate        DateTime       @map("due_date") @db.Date
+  graceDays      Int            @map("grace_days")
+  fineEndDate    DateTime?      @map("fine_end_date") @db.Date
+  academicYear   AcademicYear   @relation(fields: [academicYearId], references: [id])
+  feeStructures  FeeStructure[]
+  ledgerEntries  LedgerEntry[]
+  students       Student[]
+
+  @@unique([academicYearId, name])
+  @@map("semesters")
+}
+
+model FeeStructure {
+  id             Int          @id @default(autoincrement())
+  courseId       Int          @map("course_id")
+  academicYearId Int          @map("academic_year_id")
+  semesterId     Int          @map("semester_id")
+  component      FeeComponent
+  studyYear      Int          @map("study_year")
+  amount         Int
+  course         Course       @relation(fields: [courseId], references: [id])
+  academicYear   AcademicYear @relation(fields: [academicYearId], references: [id])
+  semester       Semester     @relation(fields: [semesterId], references: [id])
+
+  @@unique([courseId, academicYearId, semesterId, component, studyYear])
+  @@map("fee_structures")
+}
+
+model HostelRate {
+  id         Int    @id @default(autoincrement())
+  condition  String @db.VarChar(10)
+  occupancy  String @db.VarChar(30)
+  annualFee  Int    @map("annual_fee")
+
+  @@unique([condition, occupancy])
+  @@map("hostel_rates")
+}
+
+model Student {
+  id                   Int            @id @default(autoincrement())
+  registrationNumber   String         @unique @map("registration_number") @db.VarChar(40)
+  enrolmentNumber      String?        @unique @map("enrolment_number") @db.VarChar(40)
+  name                 String         @db.VarChar(120)
+  whatsappNumber       String         @map("whatsapp_number") @db.VarChar(20)
+  phoneNumber          String         @map("phone_number") @db.VarChar(20)
+  email                String         @db.VarChar(120)
+  fatherName           String         @map("father_name") @db.VarChar(120)
+  branch               String         @db.VarChar(80)
+  courseId             Int            @map("course_id")
+  academicYearId       Int            @map("academic_year_id")
+  admissionSemesterId  Int            @map("admission_semester_id")
+  admissionType        AdmissionType  @map("admission_type")
+  isHosteller          Boolean        @default(false) @map("is_hosteller")
+  studyYear            Int            @default(1) @map("study_year")
+  status               StudentStatus  @default(ACTIVE)
+  leftOn               DateTime?      @map("left_on") @db.Date
+  course               Course         @relation(fields: [courseId], references: [id])
+  academicYear         AcademicYear   @relation(fields: [academicYearId], references: [id])
+  admissionSemester    Semester       @relation(fields: [admissionSemesterId], references: [id])
+  feeAccounts          FeeAccount[]
+  reminders            Reminder[]
+
+  @@map("students")
+}
+
+model FeeAccount {
+  id             Int                 @id @default(autoincrement())
+  studentId      Int                 @map("student_id")
+  product        FeeProduct
+  academicYearId Int                 @map("academic_year_id")
+  student        Student             @relation(fields: [studentId], references: [id])
+  academicYear   AcademicYear        @relation(fields: [academicYearId], references: [id])
+  ledgerEntries  LedgerEntry[]
+  allocations    PaymentAllocation[]
+
+  @@unique([studentId, product, academicYearId])
+  @@map("fee_accounts")
+}
+
+model LedgerEntry {
+  id               Int              @id @default(autoincrement())
+  feeAccountId     Int              @map("fee_account_id")
+  semesterId       Int?             @map("semester_id")
+  bucket           LedgerBucket
+  entryType        LedgerEntryType  @map("entry_type")
+  direction        LedgerDirection
+  amount           Int
+  component        FeeComponent
+  effectiveDate    DateTime         @map("effective_date") @db.Date
+  actedBy          String           @map("acted_by") @db.VarChar(80)
+  reason           String?          @db.VarChar(255)
+  relatedEntryId   Int?             @map("related_entry_id")
+  paymentAttemptId Int?             @map("payment_attempt_id")
+  feeAccount       FeeAccount       @relation(fields: [feeAccountId], references: [id])
+  semester         Semester?        @relation(fields: [semesterId], references: [id])
+  relatedEntry     LedgerEntry?     @relation("LedgerSettlement", fields: [relatedEntryId], references: [id])
+  settledBy        LedgerEntry[]    @relation("LedgerSettlement")
+  paymentAttempt   PaymentAttempt?  @relation(fields: [paymentAttemptId], references: [id])
+
+  @@map("ledger_entries")
+}
+
+model PaymentAttempt {
+  id             Int                  @id @default(autoincrement())
+  method         PaymentMethod
+  status         PaymentStatus
+  amount         Int
+  reference      String?              @unique @db.VarChar(80)
+  idempotencyKey String               @unique @map("idempotency_key") @db.VarChar(80)
+  receiptNo      String?              @unique @map("receipt_no") @db.VarChar(40)
+  actedBy        String?              @map("acted_by") @db.VarChar(80)
+  paidOn         DateTime?            @map("paid_on") @db.Date
+  createdAt      DateTime             @default(now()) @map("created_at")
+  allocations    PaymentAllocation[]
+  ledgerEntries  LedgerEntry[]
+
+  @@map("payment_attempts")
+}
+
+model PaymentAllocation {
+  id               Int            @id @default(autoincrement())
+  paymentAttemptId Int            @map("payment_attempt_id")
+  feeAccountId     Int            @map("fee_account_id")
+  bucket           LedgerBucket
+  amount           Int
+  paymentAttempt   PaymentAttempt @relation(fields: [paymentAttemptId], references: [id])
+  feeAccount       FeeAccount     @relation(fields: [feeAccountId], references: [id])
+
+  @@map("payment_allocations")
+}
+
+model ImportBatch {
+  id        Int               @id @default(autoincrement())
+  status    ImportBatchStatus @default(PREVIEW)
+  fileName  String            @map("file_name") @db.VarChar(255)
+  createdAt DateTime          @default(now()) @map("created_at")
+  rows      ImportRow[]
+
+  @@map("import_batches")
+}
+
+model ImportRow {
+  id            Int         @id @default(autoincrement())
+  importBatchId Int         @map("import_batch_id")
+  rowNumber     Int         @map("row_number")
+  valid         Boolean
+  errors        Json?
+  payload       Json
+  importBatch   ImportBatch @relation(fields: [importBatchId], references: [id])
+
+  @@map("import_rows")
+}
+
+model Reminder {
+  id        Int              @id @default(autoincrement())
+  studentId Int              @map("student_id")
+  channel   ReminderChannel
+  sentAt    DateTime         @default(now()) @map("sent_at")
+  actedBy   String           @map("acted_by") @db.VarChar(80)
+  student   Student          @relation(fields: [studentId], references: [id])
+
+  @@map("reminders")
+}

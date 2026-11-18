@@ -1,0 +1,40 @@
+:root {
+  /* ICCMRT website palette, sampled from the supplied screenshots. */
+  --iccmrt-navy: #162b50;
+  --iccmrt-blue: #123f75;
+  --iccmrt-blue-deep: #103b70;
+  --iccmrt-blue-overlay: rgb(18 63 117 / 82%);
+  --iccmrt-red: #ed2939;
+  --iccmrt-yellow: #ffc20e;
+  --iccmrt-yellow-light: #ffedb5;
+  --iccmrt-green: #168e5d;
+
+  --iccmrt-white: #fff;
+  --iccmrt-background: #fff;
+  --iccmrt-text: #1d2b40;
+  --iccmrt-text-muted: #b9cbe0;
+  --iccmrt-divider: rgb(255 255 255 / 12%);
+
+  /* Bright chart palette sampled from the supplied graph reference. */
+  --chart-red: #f04f5f;
+  --chart-green: #22c55e;
+  --chart-gold: #eab308;
+  --chart-purple: #a855f7;
+  --chart-indigo: #6366f1;
+  --chart-teal: #14b8a6;
+  --chart-orange: #f97316;
+  --chart-pink: #ec4899;
+  --chart-violet: #8b5cf6;
+  --chart-lime: #84cc16;
+
+  /* Semantic aliases for use throughout the application. */
+  --color-primary: var(--iccmrt-navy);
+  --color-primary-strong: var(--iccmrt-blue);
+  --color-accent: var(--iccmrt-red);
+  --color-highlight: var(--iccmrt-yellow);
+  --color-success: var(--iccmrt-green);
+  --color-surface: var(--iccmrt-white);
+  --color-page: #f5f7fa;
+  --color-text: var(--iccmrt-text);
+  --color-text-muted: var(--iccmrt-text-muted);
+}

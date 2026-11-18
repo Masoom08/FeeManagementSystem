@@ -1,0 +1,126 @@
+/* Readability defaults for staff users: larger labels, controls, and focus states. */
+.side-section-label{font-size:11px}
+.nav-item{height:48px;font-size:14px}
+.profile-copy strong{font-size:13px}
+.profile-copy small,.support-card p,.support-card a{font-size:12px}
+.breadcrumb,.top-date{font-size:13px}
+.welcome-row h1{font-size:30px}
+.page-subtitle{font-size:14px}
+.eyebrow{font-size:11px}
+.primary-button,.secondary-button{height:43px;padding:0 16px;font-size:13px}
+.stat-card{height:158px;padding:18px}
+.stat-label{font-size:13px}
+.stat-number{font-size:26px}
+.stat-foot{font-size:11px}
+.stat-note,.stat-alert,.stat-trend{font-size:11px}
+.panel-heading h2{font-size:16px}
+.panel-heading p{font-size:12px}
+.panel-heading select{font-size:12px}
+.collection-total strong{font-size:23px}
+.collection-total span{font-size:11px}
+.breakdown-list>div,.category-name,.breakdown-list strong{font-size:12px}
+.breakdown-list small,.chart-legend{font-size:10px}
+.activity-panel th{font-size:10px}
+.activity-panel td{font-size:12px}
+.student-cell strong{font-size:12px}
+.student-cell small{font-size:10px}
+.status{font-size:10px;padding:5px 9px}
+.table-search{height:36px;width:205px}
+.table-search input,.filter-button,.view-all{font-size:12px}
+.filter-button{height:36px;padding:0 12px}
+.table-footer,.page-footer{font-size:11px}
+.table-footer button{width:29px;height:28px;font-size:11px}
+.login-card label{font-size:12px}
+.login-card input{height:46px;font-size:13px}
+.login-subtitle{font-size:14px}
+.login-button{height:48px;font-size:14px}
+button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid #8179dd;outline-offset:2px}
+.student-shortcut{display:flex;align-items:center;gap:16px;margin-top:18px;padding:21px}
+.student-shortcut-icon{width:44px;height:44px;flex:0 0 auto;display:grid;place-items:center;background:rgb(18 63 117 / 8%);color:var(--color-primary-strong);border-radius:11px}
+.student-shortcut>div{flex:1}
+.student-shortcut h2{font:700 16px Manrope,sans-serif;color:#333249;margin:0 0 5px}
+.student-shortcut p{font-size:13px;color:#828195;margin:0}
+.student-shortcut .secondary-button{white-space:nowrap}
+@media(max-width:760px){.welcome-row h1{font-size:26px}.stat-card{height:148px}.stat-foot{font-size:10px}.stat-note,.stat-alert{font-size:9px}.page-footer{font-size:10px}}
+@media(max-width:420px){.stat-number{font-size:20px}.stat-label{font-size:11px}.stat-foot{font-size:9px}.stat-alert{font-size:8px}}
+@media(max-width:600px){.student-shortcut{align-items:flex-start;flex-wrap:wrap;padding:16px}.student-shortcut>div{min-width:calc(100% - 65px)}.student-shortcut .secondary-button{width:100%}}
+
+/* Clearer surfaces and stronger boundaries for day-to-day staff use. */
+.app-shell{background:var(--color-page);color:#1d2b40}
+.sidebar{background:#fff;border-right:2px solid #c4ced8}
+.topbar{background:#fff;border-bottom:2px solid #c4ced8}
+.nav-item{color:#35465b}
+.nav-item:hover{background:#eaf0f6;color:var(--iccmrt-blue);outline:1px solid #c2cfdd}
+.nav-item.active{background:#e4edf6;color:var(--iccmrt-blue-deep);box-shadow:inset 4px 0 0 var(--iccmrt-blue)}
+.side-section-label,.eyebrow{color:#53657a}
+.brand,.brand small,.profile-copy strong,.welcome-row h1,.panel-heading h2,.stat-number,.student-cell strong{color:#172d4b}
+.stat-card,.panel{border:1px solid #c7d0da;box-shadow:0 2px 5px rgb(22 43 80 / 8%);border-radius:8px}
+.primary-button{background:var(--iccmrt-blue);border-color:var(--iccmrt-blue);box-shadow:none}
+.primary-button:hover{background:var(--iccmrt-blue-deep)}
+.secondary-button,.filter-button,.table-search,.panel-heading select{border-color:#9eacbb;color:#263b54}
+.secondary-button:hover,.filter-button:hover{background:#edf3f8;border-color:var(--iccmrt-blue)}
+input,select{color:#1d2b40}
+thead{background:#e9eef4}
+th{color:#344860;font-size:11px}
+td{border-top-color:#d5dce4;color:#35465b}
+.table-footer,.student-list-footer,.waiver-table-footer{border-top-color:#c7d0da;color:#35465b}
+.status-paid,.fine-waived{color:#176344}
+.status-pending,.fine-pending,.status-unpaid{color:#805300}
+.status-overdue{color:#8e2028}
+button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid var(--iccmrt-yellow);outline-offset:3px}
+@media(max-width:760px){.stat-foot{font-size:11px}.stat-note,.stat-alert{font-size:11px}.page-footer{font-size:11px}}
+@media(max-width:420px){.stat-number{font-size:20px}.stat-label{font-size:12px}.stat-foot{font-size:10px}.stat-alert{font-size:10px}}
+
+/* Carry the same outlined treatment across every sidebar destination. */
+.student-summary-card,.waiver-summary,.fee-course-table-card,.hostel-fee-panel,.hostel-room-card,.history-message,.reminder-history,.student-list-panel,.waiver-list-panel{border:1px solid #c7d0da;border-radius:8px;box-shadow:0 2px 5px rgb(22 43 80 / 8%);background:#fff}
+.student-summary-card,.waiver-summary{outline:1px solid rgb(199 208 218 / 45%);outline-offset:1px}
+.student-tabs,.fee-structure-tabs,.waiver-filter-tabs{border-bottom:2px solid #c4ced8}
+.student-tabs button,.fee-structure-tabs button,.waiver-filter-tabs button{color:#35465b;font-size:13px}
+.student-tabs button.active,.fee-structure-tabs button.active,.waiver-filter-tabs button.selected{color:var(--iccmrt-blue-deep);border-bottom-color:var(--iccmrt-blue);font-weight:700}
+.student-filter select,.student-filter>div,.waiver-course-filter select,.export-buttons button,.waiver-download-button,.waiver-prototype-tag{border-color:#9eacbb}
+.student-filter select:focus,.student-filter input:focus,.waiver-course-filter select:focus{border-color:var(--iccmrt-blue);outline:3px solid rgb(18 63 117 / 15%)}
+.student-fee-table td,.waiver-table td{border-top:1px solid #d5dce4}
+.student-list-title,.waiver-list-heading,.hostel-fee-heading,.reminder-history-heading{border-bottom:1px solid #c7d0da}
+.history-message-body{background:#f1f4f7;border-color:#c7d0da}
+.fee-structure-table th,.fee-structure-table td{border-color:#b9c4d0}
+.fee-course-table-card h2,.hostel-room-card h3{background:#e9eef4;border-bottom-color:#c7d0da}
+
+/* Grid lines make student fee tables easier to track across rows and columns. */
+.student-fee-table th,.student-fee-table td,.overview-student-fee-table th,.overview-student-fee-table td,.waiver-table th,.waiver-table td{border-right:1px solid #c7d0da;border-bottom:1px solid #c7d0da}
+.student-fee-table th:first-child,.student-fee-table td:first-child,.overview-student-fee-table th:first-child,.overview-student-fee-table td:first-child,.waiver-table th:first-child,.waiver-table td:first-child{border-left:1px solid #c7d0da}
+.student-fee-table thead th,.overview-student-fee-table thead th,.waiver-table thead th{background:#e9eef4;border-bottom:2px solid #aebbc9}
+.student-fee-table tr:last-child td,.overview-student-fee-table tr:last-child td,.waiver-table tr:last-child td{border-bottom:1px solid #c7d0da}
+
+/* Use the institute yellow consistently for table header rows. */
+.app-shell thead th,.app-shell .fee-structure-table thead th{background:var(--iccmrt-yellow-light);color:var(--iccmrt-navy);border-color:#e6ca70;font-weight:700}
+.nav-item:hover{background:var(--iccmrt-yellow-light);color:var(--iccmrt-navy);outline:1px solid #e6ca70}
+.nav-item:hover svg{color:var(--iccmrt-navy)}
+.nav-item:hover{background:#eaf0f6;color:var(--iccmrt-blue);outline:1px solid #c2cfdd}
+.nav-item:hover svg{color:var(--iccmrt-blue)}
+.app-shell thead th,.app-shell .fee-structure-table thead th{background:var(--iccmrt-yellow);color:var(--iccmrt-navy);border-color:#d6a500;font-weight:700}
+.fee-course-table-card h2{background:var(--iccmrt-blue-deep);color:#fff;border-bottom-color:var(--iccmrt-navy)}
+.fee-course-table-card h2 svg{color:#fff}
+.hostel-room-card h3{background:var(--iccmrt-blue-deep);color:#fff}
+.chart-line,.chart-svg circle{stroke:url(#collectionLine)}
+.donut{background:conic-gradient(var(--chart-gold) 0 30%,var(--chart-indigo) 30% 50%,var(--chart-green) 50% 75%,var(--chart-red) 75% 100%)}
+.dot-purple{background:var(--chart-gold)}
+.dot-blue{background:var(--chart-indigo)}
+.dot-orange{background:var(--chart-green)}
+.dot-gray{background:var(--chart-red)}
+.legend-paid{background:var(--chart-indigo)}
+.legend-target{background:var(--chart-gold)}
+.progress-track span{background:var(--iccmrt-yellow)}
+.student-progress span{background:var(--iccmrt-red)}
+.student-list-title{background:var(--iccmrt-blue-deep);border-bottom-color:var(--iccmrt-navy)}
+.student-list-title h2,.student-list-title p{color:#fff}
+.activity-heading{background:var(--iccmrt-blue-deep);border-bottom:1px solid var(--iccmrt-navy);border-radius:8px 8px 0 0}
+.activity-heading h2,.activity-heading p{color:#fff}
+.waiver-list-heading{background:var(--iccmrt-blue-deep);border-bottom-color:var(--iccmrt-navy)}
+.waiver-list-heading h2,.waiver-list-heading p,.waiver-course-filter{color:#fff}
+.login-button{background:var(--iccmrt-yellow);border-color:var(--iccmrt-yellow);color:var(--iccmrt-navy)}
+.login-button:hover{background:#e6ae00;border-color:#e6ae00;color:var(--iccmrt-navy)}
+.activity-heading .view-all{min-height:36px;margin-left:4px;padding:0 12px;border:1px solid var(--iccmrt-yellow);border-radius:6px;background:var(--iccmrt-yellow);color:var(--iccmrt-navy);font-size:12px;font-weight:700;white-space:nowrap}
+.activity-heading .view-all:hover{background:var(--iccmrt-yellow-light);border-color:var(--iccmrt-yellow-light);color:var(--iccmrt-navy)}
+.activity-panel .student-table-wrap{padding:0 14px}
+.activity-heading{margin-left:14px;margin-right:14px}
+.activity-heading,.student-list-title,.waiver-list-heading{border-radius:0}

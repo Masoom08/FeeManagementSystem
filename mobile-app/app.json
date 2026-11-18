@@ -1,0 +1,25 @@
+{
+  "expo": {
+    "name": "ICCMRT Fee Portal",
+    "slug": "iccmrt-fee-mobile",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "scheme": "iccmrtfee",
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "in.edu.iccmrt.feeportal",
+      "infoPlist": {
+        "UIFileSharingEnabled": true,
+        "LSSupportsOpeningDocumentsInPlace": true
+      }
+    },
+    "android": {
+      "package": "in.edu.iccmrt.feeportal",
+      "softwareKeyboardLayoutMode": "resize",
+      "adaptiveIcon": {
+        "backgroundColor": "#123F75"
+      }
+    }
+  }
+}

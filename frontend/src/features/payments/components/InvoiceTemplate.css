@@ -1,0 +1,35 @@
+.invoice-overlay{position:fixed;inset:0;z-index:1000;display:grid;place-items:center;overflow:auto;padding:24px;background:rgb(10 25 43 / 62%)}
+.invoice-dialog{width:min(820px,100%);max-height:calc(100vh - 48px);overflow:auto;border-radius:12px;background:#edf2f7;box-shadow:0 25px 80px rgb(0 0 0 / 28%)}
+.invoice-toolbar{position:sticky;top:0;z-index:2;display:flex;justify-content:space-between;align-items:center;padding:12px 16px;background:#123f75;color:#fff;font-size:13px;font-weight:700}
+.invoice-toolbar>div{display:flex;align-items:center;gap:8px}
+.invoice-print-button{height:34px;padding:0 12px;border:0;border-radius:6px;background:#ffc20e;color:#162b50;font-size:12px;font-weight:800;cursor:pointer}
+.invoice-close-button{width:32px;height:32px;border:1px solid #ffffff50;border-radius:6px;background:transparent;color:#fff;font-size:22px;line-height:1;cursor:pointer}
+.invoice-paper{position:relative;width:min(760px,calc(100% - 34px));margin:17px auto;padding:30px 34px 20px;background:#fff;color:#25354a;box-shadow:0 3px 14px rgb(22 43 80 / 12%)}
+.invoice-paper:before{position:absolute;top:0;right:0;left:0;height:7px;background:#ffc20e;content:""}
+.invoice-institution-header{display:grid;grid-template-columns:76px minmax(0,1fr) auto;align-items:center;gap:16px;padding:0 0 21px;border-bottom:2px solid #123f75}
+.invoice-institution-header img{width:72px;height:72px;object-fit:contain}
+.invoice-institution-header h1{margin:0 0 3px;color:#123f75;font-size:22px;letter-spacing:.08em}
+.invoice-institution-header p{margin:0;color:#34465d;font-size:13px;font-weight:700;line-height:1.45}
+.invoice-institution-header div>span{display:inline-block;margin-top:7px;padding:4px 8px;background:#fff2bf;color:#735300;font-size:9px;font-weight:800;letter-spacing:.12em}
+.invoice-receipt-number{display:grid;justify-items:end;gap:5px;align-self:start;padding-top:4px}
+.invoice-receipt-number small{color:#7c8998;font-size:9px;font-weight:800;letter-spacing:.1em}
+.invoice-receipt-number strong{color:#123f75;font-size:13px}
+.invoice-details-grid{display:grid;grid-template-columns:1fr 1fr;gap:0 24px;padding:17px 0 18px}
+.invoice-details-grid>div{display:grid;grid-template-columns:130px minmax(0,1fr);gap:8px;padding:8px 0;border-bottom:1px solid #e8edf3;font-size:11px}
+.invoice-details-grid span{color:#708095}.invoice-details-grid strong{overflow-wrap:anywhere;color:#24364c;font-weight:700}
+.invoice-lines{width:100%;border-collapse:collapse;font-size:11px}
+.invoice-lines th{padding:10px 11px;background:#123f75;color:white;text-align:left;font-size:10px;letter-spacing:.04em}
+.invoice-lines th:first-child,.invoice-lines td:first-child{width:54px;text-align:center}
+.invoice-lines th:last-child,.invoice-lines td:last-child{width:145px;text-align:right;white-space:nowrap}
+.invoice-lines td{padding:11px;border:1px solid #dfe6ee;vertical-align:top}
+.invoice-lines tbody tr:nth-child(even){background:#f7f9fc}
+.invoice-lines td small{display:block;margin-top:4px;color:#6e7c8f;font-size:9px}
+.invoice-lines tfoot td{background:#fff2bf;color:#162b50;font-weight:800}
+.invoice-balance-row{display:flex;justify-content:space-between;align-items:center;margin-top:13px;padding:11px 13px;border:1px solid #e9d27c;background:#fffae7;color:#546276;font-size:11px}
+.invoice-balance-row strong{color:#123f75;font-size:14px}
+.invoice-signatures{display:grid;grid-template-columns:1fr 1fr;gap:40px;padding:44px 10px 16px}
+.invoice-signatures>div{min-height:32px;border-top:1px solid #8290a0;text-align:center}
+.invoice-signatures span{position:relative;top:7px;color:#53647a;font-size:10px;font-weight:700}
+.invoice-footer{margin-top:7px;padding:10px 12px;border-top:2px solid #ffc20e;background:#f6f8fb;color:#5e6d80;text-align:center;font-size:9px;line-height:1.5}
+@media(max-width:620px){.invoice-overlay{place-items:start center;padding:10px}.invoice-dialog{max-height:calc(100vh - 20px)}.invoice-paper{width:calc(100% - 20px);margin:10px;padding:24px 17px 16px}.invoice-institution-header{grid-template-columns:52px 1fr;gap:10px}.invoice-institution-header img{width:50px;height:50px}.invoice-institution-header h1{font-size:17px}.invoice-institution-header p{font-size:10px}.invoice-receipt-number{grid-column:1/-1;justify-items:start}.invoice-details-grid{grid-template-columns:1fr}.invoice-details-grid>div{grid-template-columns:115px minmax(0,1fr)}.invoice-lines th:last-child,.invoice-lines td:last-child{width:100px}.invoice-lines td,.invoice-lines th{padding:8px 7px}.invoice-signatures{gap:20px;padding-top:34px}}
+@media print{body *{visibility:hidden!important}.invoice-overlay,.invoice-overlay *{visibility:visible!important}.invoice-overlay{position:absolute;inset:0;display:block;overflow:visible;padding:0;background:#fff}.invoice-dialog{width:100%;max-height:none;overflow:visible;border-radius:0;background:#fff;box-shadow:none}.invoice-toolbar{display:none}.invoice-paper{width:100%;max-width:none;margin:0;padding:20px 24px;box-shadow:none}.invoice-lines tr,.invoice-details-grid,.invoice-balance-row,.invoice-signatures{break-inside:avoid}@page{size:A4;margin:12mm}}

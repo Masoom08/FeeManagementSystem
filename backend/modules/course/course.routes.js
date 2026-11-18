@@ -15,5 +15,6 @@ router.patch(
   validate({ params: schemas.courseIdParams, body: schemas.updateCourseBody }),
   controller.updateCourse
 );
+router.delete("/:id", requireSuperAdmin, validate({ params: schemas.courseIdParams }), controller.deleteCourse);
 
 module.exports = router;

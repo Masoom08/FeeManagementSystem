@@ -8,14 +8,13 @@ const seedActor = "FRONTEND-DEMO-SEED";
 const courseDefinitions = [
   { name: "BBA (LU)", code: "BLU", fee: 24500, affiliation: "LU", duration: 3 },
   { name: "B.Com (Hons.)", code: "BCM", fee: 22000, affiliation: "LU", duration: 3 },
-  { name: "MBA", code: "MBA", fee: 32000, affiliation: "LU", duration: 2 },
   { name: "BBA (AKTU)", code: "BAK", fee: 26000, affiliation: "AKTU", duration: 3 },
   { name: "MBA (AKTU)", code: "MBAAK", fee: 32000, affiliation: "AKTU", duration: 2 },
 ];
 const coursesByBatch = {
-  2026: ["BBA (AKTU)"],
-  2025: ["BBA (LU)", "MBA (AKTU)"],
-  2024: ["B.Com (Hons.)"],
+  2026: ["BBA (LU)", "B.Com (Hons.)", "BBA (AKTU)", "MBA (AKTU)"],
+  2025: ["BBA (LU)", "B.Com (Hons.)", "BBA (AKTU)", "MBA (AKTU)"],
+  2024: ["BBA (LU)", "B.Com (Hons.)", "BBA (AKTU)", "MBA (AKTU)"],
 };
 const studentDefinitions = [
   { registrationNumber: "ICM2026BAK01", name: "Masoom Singh", phoneNumber: "9454716083", batch: 2026, courseName: "BBA (AKTU)", studyYear: 1, semesterNumber: 1, paid: true },
@@ -63,6 +62,18 @@ function paymentDate(batch, semesterNumber, index) {
 }
 
 async function seedCourses() {
+  const duplicateMba = await prisma.course.findUnique({
+    where: { courseCode: "MBA" },
+    include: { _count: { select: { students: true } } },
+  });
+  if (duplicateMba) {
+    if (duplicateMba._count.students > 0) {
+      throw new Error("Cannot remove the duplicate MBA course while students are assigned to it. Move those students to MBA (AKTU) first.");
+    }
+    await prisma.feeStructure.deleteMany({ where: { courseId: duplicateMba.id } });
+    await prisma.course.delete({ where: { id: duplicateMba.id } });
+  }
+
   const result = new Map();
   for (const definition of courseDefinitions) {
     const course = await prisma.course.upsert({
@@ -160,7 +171,7 @@ async function seedHostelRates() {
 async function seedUsers() {
   const passwordHash = await hashPassword("12345678");
   for (const user of [
-    { email: "admin@gmail.com", role: "TEACHER" },
+    { email: "admin@gmail.com", role: "ADMIN" },
     { email: "superadmin@gmail.com", role: "SUPERADMIN" },
   ]) {
     await pool.execute(

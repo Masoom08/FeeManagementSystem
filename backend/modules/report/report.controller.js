@@ -1,6 +1,16 @@
 const { asyncRoute } = require("../../lib/asyncRoute");
 const reportService = require("./report.service");
 
+const dashboardSummary = asyncRoute(async (req, res) => {
+  const summary = await reportService.dashboardSummary();
+  res.status(200).json({ success: true, data: summary });
+});
+
+const courseCollections = asyncRoute(async (req, res) => {
+  const collections = await reportService.courseCollectionSummary();
+  res.status(200).json({ success: true, data: collections });
+});
+
 const payments = asyncRoute(async (req, res) => {
   const result = await reportService.paymentsReport(req.query);
   if (req.query.format === "xlsx") {
@@ -49,6 +59,8 @@ const reconciliation = asyncRoute(async (req, res) => {
 });
 
 module.exports = {
+  dashboardSummary,
+  courseCollections,
   payments,
   unpaid,
   failedPayments,

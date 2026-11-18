@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react'
 
-export type IconName = 'grid' | 'users' | 'receipt' | 'chart' | 'settings' | 'search' | 'bell' | 'chevron' | 'arrow' | 'plus' | 'download' | 'menu' | 'logout' | 'calendar' | 'check' | 'clock' | 'wallet'
+export type IconName = 'grid' | 'users' | 'receipt' | 'chart' | 'settings' | 'search' | 'bell' | 'chevron' | 'arrow' | 'plus' | 'download' | 'upload' | 'menu' | 'logout' | 'calendar' | 'check' | 'clock' | 'wallet'
 
 export function Icon({ name, size = 18 }: { name: IconName; size?: number }) {
   const common = { width: size, height: size, viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: 1.8, strokeLinecap: 'round' as const, strokeLinejoin: 'round' as const, 'aria-hidden': true as const }
@@ -14,6 +14,7 @@ export function Icon({ name, size = 18 }: { name: IconName; size?: number }) {
     bell: <><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4"/></>,
     chevron: <path d="m9 18 6-6-6-6"/>, arrow: <><path d="M7 17 17 7M7 7h10v10"/></>, plus: <><path d="M12 5v14M5 12h14"/></>,
     download: <><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5M12 15V3"/></>, menu: <><path d="M4 6h16M4 12h16M4 18h16"/></>, logout: <><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="m16 17 5-5-5-5M21 12H9"/></>,
+    upload: <><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m17 8-5-5-5 5M12 3v12"/></>,
     calendar: <><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 11h18"/></>, check: <><path d="m5 12 4 4L19 6"/></>, clock: <><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></>, wallet: <><rect x="3" y="5" width="18" height="15" rx="2"/><path d="M3 9h18M16 15h2"/><path d="M3 5V4a2 2 0 0 1 2-2h13"/></>,
   }
   return <svg {...common}>{paths[name]}</svg>

@@ -33,6 +33,8 @@ app.get("/", (req, res) => {
         "/api/hostel-rates",
         "/api/fees",
         "/api/students",
+        "/api/students/imports/preview",
+        "/api/students/imports/:id/commit",
         "/api/student-auth/request-otp",
         "/api/student-auth/verify-otp",
         "/api/student-auth/me",

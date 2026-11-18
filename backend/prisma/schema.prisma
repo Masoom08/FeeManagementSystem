@@ -79,7 +79,7 @@ enum ImportBatchStatus {
 }
 
 enum UserRole {
-  TEACHER
+  ADMIN
   SUPERADMIN
 }
 

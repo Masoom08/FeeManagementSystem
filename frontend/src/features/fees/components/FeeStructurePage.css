@@ -11,6 +11,20 @@
 
 .fee-amount-details summary .fee-chevron{width:7px;height:7px;border-right:1.5px solid currentColor;border-bottom:1.5px solid currentColor;transform:rotate(45deg) translateY(-2px);transition:transform .16s ease;margin-left:2px}.fee-amount-details[open] summary .fee-chevron{transform:rotate(225deg) translate(-1px,-1px)}
 
+.fee-year-filter-row{display:flex;align-items:center;justify-content:space-between;gap:14px;margin:8px 0 2px;padding:12px 14px;border:1px solid #e7eaf0;border-radius:10px;background:linear-gradient(110deg,#fff 0%,#f8faff 100%)}
+.fee-year-filter{display:flex;align-items:center;gap:12px;color:#636b7a;font-size:12px;font-weight:700}
+.fee-year-filter>span:first-child{min-width:82px;color:#5c6473}
+.fee-year-select{position:relative;display:inline-flex;align-items:center;min-width:150px}
+.fee-year-select select{appearance:none;width:100%;height:40px;padding:0 38px 0 13px;border:1px solid #d5dce7;border-radius:8px;outline:none;background:#fff;color:#263a54;font:700 13px Manrope,sans-serif;box-shadow:0 2px 5px rgb(31 58 91 / 5%);cursor:pointer;transition:border-color .16s ease,box-shadow .16s ease,background .16s ease}
+.fee-year-select select:hover{border-color:#9aacc1;background:#fcfdff}
+.fee-year-select select:focus-visible{border-color:#416b98;box-shadow:0 0 0 3px rgb(49 91 137 / 14%)}
+.fee-year-select select:disabled{color:#929baa;background:#f6f7f9;cursor:wait}
+.fee-year-select svg{position:absolute;right:12px;color:#59728f;transform:rotate(90deg);pointer-events:none}
+.fee-year-caption{color:#778296;font-size:11px;font-weight:500}
+@media(max-width:600px){.fee-year-filter-row{align-items:flex-start;flex-direction:column;gap:8px}.fee-year-filter{width:100%;justify-content:space-between}.fee-year-select{flex:1;max-width:190px}.fee-year-caption{padding-left:94px}}
+
 .fee-breakdown-popover{position:fixed;z-index:1000;transform:none;right:auto;max-height:min(260px,calc(100vh - 24px));overflow-y:auto}.fee-breakdown-popover strong{position:sticky;top:0;background:#fff}
 .fee-structure-title-row{display:flex;align-items:center;justify-content:space-between;gap:12px}.fee-structure-title-row button{height:40px;white-space:nowrap}@media(max-width:600px){.fee-structure-title-row{align-items:flex-start;flex-direction:column}.fee-structure-title-row button{width:100%}}
 .fee-structure-table th,.fee-structure-table td{border-color:#eceef3}.hostel-fee-table{border-collapse:collapse}.hostel-fee-table th,.hostel-fee-table td{border:1px solid #eceef3}
+.fee-config-admin{padding:18px;overflow:hidden}.fee-admin-actions{display:flex;gap:6px}.fee-admin-actions button{border:1px solid #dfe3eb;border-radius:6px;background:#fff;color:#345475;padding:6px 9px;font-size:11px;font-weight:600;cursor:pointer}.fee-admin-actions button.danger{color:#a63e3e;border-color:#f0d0d0}.fee-admin-actions button:disabled{opacity:.5;cursor:wait}
+.fee-amount-edit{width:118px;height:34px;padding:0 8px;border:1px solid #b8c8d8;border-radius:6px;color:#314b65;font:inherit}.fee-admin-actions button:disabled{opacity:.5;cursor:wait}

@@ -11,7 +11,7 @@ export type DashboardPageName = 'Overview' | 'Students' | 'Fee structure' | 'Cou
 type DashboardPageProps = {
   onLogout: () => void
   initialPage: DashboardPageName
-  role: 'TEACHER' | 'SUPERADMIN'
+  role: 'ADMIN' | 'SUPERADMIN'
   onNavigate: (page: DashboardPageName) => void
 }
 
@@ -57,7 +57,7 @@ export function DashboardPage({ onLogout, initialPage, role, onNavigate }: Dashb
         </button>)}
       </nav>
       <div className="sidebar-bottom">
-        <button className="profile" onClick={onLogout}><span className="avatar avatar-profile">{role === 'SUPERADMIN' ? 'SA' : 'T'}</span><span className="profile-copy"><strong>{role === 'SUPERADMIN' ? 'Super Admin' : 'Teacher'}</strong><small>{role === 'SUPERADMIN' ? 'Administrator' : 'Staff account'}</small></span><Icon name="logout" size={17}/></button>
+        <button className="profile" onClick={onLogout}><span className="avatar avatar-profile">{role === 'SUPERADMIN' ? 'SA' : 'A'}</span><span className="profile-copy"><strong>{role === 'SUPERADMIN' ? 'Super Admin' : 'Admin'}</strong><small>{role === 'SUPERADMIN' ? 'Administrator' : 'Staff account'}</small></span><Icon name="logout" size={17}/></button>
       </div>
     </aside>
 
@@ -72,7 +72,7 @@ export function DashboardPage({ onLogout, initialPage, role, onNavigate }: Dashb
 
       {notice && <div className="toast" role="status">{notice}<button onClick={() => setNotice('')}>×</button></div>}
       <div className="page-content">
-        {active === 'Students' ? <StudentFeeManagement onNotice={setNotice} view="students" refreshKey={dataRefreshKey} onAddStudent={role === 'SUPERADMIN' ? () => setCreateSection('Add student') : undefined}/> : active === 'Reminder history' ? <StudentFeeManagement onNotice={setNotice} view="reminders"/> : active === 'Fee structure' ? <FeeStructurePage refreshKey={dataRefreshKey} onAddFeeStructure={role === 'SUPERADMIN' ? () => setCreateSection('Add fee structure') : undefined}/> : active === 'Late fee waivers' ? <LateFeeWaivers/> : role === 'SUPERADMIN' && (active === 'Courses' || active === 'Academic years' || active === 'Semesters') ? <AdminManagementPage section={active as ManagementListSection} refreshKey={dataRefreshKey} onCreate={setCreateSection} onNotice={setNotice}/> : <OverviewDashboard onNotice={setNotice} onFeeStructure={() => setActive('Fee structure')}/>}
+        {active === 'Students' ? <StudentFeeManagement onNotice={setNotice} view="students" refreshKey={dataRefreshKey} canImportStudents={role === 'SUPERADMIN'} onAddStudent={role === 'SUPERADMIN' ? () => setCreateSection('Add student') : undefined}/> : active === 'Reminder history' ? <StudentFeeManagement onNotice={setNotice} view="reminders"/> : active === 'Fee structure' ? <FeeStructurePage refreshKey={dataRefreshKey} onNotice={setNotice} onAddFeeStructure={role === 'SUPERADMIN' ? () => setCreateSection('Add fee structure') : undefined}/> : active === 'Late fee waivers' ? <LateFeeWaivers/> : role === 'SUPERADMIN' && (active === 'Courses' || active === 'Academic years' || active === 'Semesters') ? <AdminManagementPage section={active as ManagementListSection} refreshKey={dataRefreshKey} onCreate={setCreateSection} onNotice={setNotice}/> : <OverviewDashboard onNotice={setNotice} onFeeStructure={() => setActive('Fee structure')}/>}
       </div>
       {createSection && role === 'SUPERADMIN' && <AdminManagementModal section={createSection} onClose={() => setCreateSection(null)} onSaved={() => setDataRefreshKey(key => key + 1)} onNotice={setNotice}/>}
     </main>

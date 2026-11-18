@@ -1,8 +1,10 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Icon } from '../../../components/ui/AppIcon'
 import { studentFeeRecords } from '../../../data/mockData'
+import { api, type ApiCourseCollectionSummary, type ApiDashboardSummary } from '../../../api/client'
 
 const currency = new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 })
+const courseColors = ['#6655b7', '#8e9fe4', '#efb26f', '#d9d8e7', '#4d9878', '#5b83ba']
 type OverviewDashboardProps = { onNotice: (message: string) => void; onFeeStructure: () => void }
 
 function exportFeeReport() {
@@ -81,6 +83,32 @@ function exportFeeReport() {
 
 export function OverviewDashboard({ onNotice, onFeeStructure }: OverviewDashboardProps) {
   const [period, setPeriod] = useState('June installment')
+  const [summary, setSummary] = useState<ApiDashboardSummary | null>(null)
+  const [summaryError, setSummaryError] = useState('')
+  const [courseCollections, setCourseCollections] = useState<ApiCourseCollectionSummary | null>(null)
+  const [courseCollectionError, setCourseCollectionError] = useState('')
+  const [courseCollectionRefreshKey, setCourseCollectionRefreshKey] = useState(0)
+  useEffect(() => {
+    let active = true
+    api.dashboardSummary().then(data => {
+      if (active) setSummary(data)
+    }).catch(() => {
+      if (active) setSummaryError('Dashboard totals could not be loaded.')
+    })
+    return () => { active = false }
+  }, [])
+  useEffect(() => {
+    let active = true
+    setCourseCollectionError('')
+    api.courseCollections().then(data => {
+      if (active) setCourseCollections(data)
+    }).catch(() => {
+      if (active) setCourseCollectionError('Course collections could not be loaded.')
+    })
+    return () => { active = false }
+  }, [courseCollectionRefreshKey])
+  const displayValue = (value: number | undefined) => value === undefined ? '—' : new Intl.NumberFormat('en-IN').format(value)
+  const displayAmount = (value: number | undefined) => value === undefined ? '—' : currency.format(value)
   const collectionByDay = useMemo(() => {
     const totals = Array.from({ length: 10 }, () => 0)
     studentFeeRecords.forEach(student => student.semesterFees.forEach(fee => {
@@ -99,18 +127,48 @@ export function OverviewDashboard({ onNotice, onFeeStructure }: OverviewDashboar
   const linePath = chartPoints.map((point, index) => `${index === 0 ? 'M' : 'L'}${point.x} ${point.y}`).join(' ')
   const areaPath = `${linePath} V130 H0Z`
   const compactCurrency = (amount: number) => amount >= 100000 ? `${currency.format(amount / 100000)}L` : amount >= 1000 ? `${currency.format(amount / 1000)}k` : currency.format(amount)
+  const donutBackground = useMemo(() => {
+    if (!courseCollections?.totalCollected) return 'conic-gradient(#e8eaf0 0 100%)'
+    let position = 0
+    const segments = courseCollections.courses.flatMap((course, index) => {
+      if (!course.amount) return []
+      const end = position + course.amount / courseCollections.totalCollected * 100
+      const segment = `${courseColors[index % courseColors.length]} ${position}% ${end}%`
+      position = end
+      return [segment]
+    })
+    return `conic-gradient(${segments.join(',')})`
+  }, [courseCollections])
 
   return <>
     <div className="welcome-row"><div><h1>Welcome, Priya<span className="wave"></span></h1><p className="page-subtitle">Manage student accounts, monitor collections, and review fee activity across your institution.</p></div><div className="welcome-actions"><button className="secondary-button" onClick={() => { exportFeeReport(); onNotice('Fee report downloaded successfully.') }}><Icon name="download" size={16}/> Export report</button><button className="primary-button" onClick={() => onNotice('Fee collection is paused for now.')}><Icon name="plus" size={17}/> Record payment</button></div></div>
     <section className="stats-grid" aria-label="Fee summary">
-      <article className="stat-card stat-main"><div className="stat-top"><span className="stat-icon indigo"><Icon name="wallet" size={18}/></span><span className="stat-trend">↗ 12.8%</span></div><div className="stat-label">Total collected</div><div className="stat-number">₹4,82,650</div><div className="stat-foot">Compared to ₹4,28,100 last month</div><div className="sparkline"><svg viewBox="0 0 150 34" preserveAspectRatio="none"><path d="M0 27 C15 25 18 29 29 20 S46 25 56 14 S72 20 86 13 S102 17 111 8 S127 17 136 5 S145 9 150 2"/></svg></div></article>
-      <article className="stat-card"><div className="stat-top"><span className="stat-icon green"><Icon name="check" size={18}/></span><span className="stat-note">This month</span></div><div className="stat-label">Payments received</div><div className="stat-number">248</div><div className="stat-foot"><span className="positive">+18</span> compared to last month</div><div className="mini-bars green-bars">{[42,57,48,70,52,78,61,88,69,100,76,90].map((height,index) => <i key={index} style={{height:`${height}%`}}/>)}</div></article>
-      <article className="stat-card"><div className="stat-top"><span className="stat-icon amber"><Icon name="clock" size={18}/></span><span className="stat-alert">Needs attention</span></div><div className="stat-label">Pending payments</div><div className="stat-number">36</div><div className="stat-foot"><span className="attention">₹1,26,400</span> outstanding amount</div><div className="mini-bars amber-bars">{[70,48,58,40,66,54,78,51,92,62,76,100].map((height,index) => <i key={index} style={{height:`${height}%`}}/>)}</div></article>
-      <article className="stat-card"><div className="stat-top"><span className="stat-icon rose"><Icon name="receipt" size={18}/></span><span className="stat-note">Across all courses</span></div><div className="stat-label">Total students</div><div className="stat-number">1,284</div><div className="stat-foot"><span className="positive">1,102 active</span> · 182 inactive</div><div className="student-progress"><span/></div></article>
+      <article className="stat-card stat-main"><div className="stat-top"><span className="stat-icon indigo"><Icon name="wallet" size={18}/></span><span className="stat-note">All time</span></div><div className="stat-label">Total collected</div><div className="stat-number">{displayAmount(summary?.totalAmountCollected)}</div><div className="stat-foot">Successful payments recorded in the database</div></article>
+      <article className="stat-card"><div className="stat-top"><span className="stat-icon green"><Icon name="check" size={18}/></span><span className="stat-note">Successful</span></div><div className="stat-label">Payments received</div><div className="stat-number">{displayValue(summary?.paymentsReceived)}</div><div className="stat-foot">Successful payment transactions</div><div className="mini-bars green-bars">{[42,57,48,70,52,78,61,88,69,100,76,90].map((height,index) => <i key={index} style={{height:`${height}%`}}/>)}</div></article>
+      <article className="stat-card"><div className="stat-top"><span className="stat-icon amber"><Icon name="clock" size={18}/></span><span className="stat-alert">Outstanding</span></div><div className="stat-label">Pending payments</div><div className="stat-number">{displayValue(summary?.pendingPayments)}</div><div className="stat-foot"><span className="attention">{displayAmount(summary?.pendingAmount)}</span> unpaid amount</div><div className="mini-bars amber-bars">{[70,48,58,40,66,54,78,51,92,62,76,100].map((height,index) => <i key={index} style={{height:`${height}%`}}/>)}</div></article>
+      <article className="stat-card"><div className="stat-top"><span className="stat-icon rose"><Icon name="receipt" size={18}/></span><span className="stat-note">All statuses</span></div><div className="stat-label">Total students</div><div className="stat-number">{displayValue(summary?.totalStudentCount)}</div><div className="stat-foot">Student records in the database</div><div className="student-progress"><span/></div></article>
     </section>
+    {summaryError && <p className="page-subtitle" role="alert">{summaryError}</p>}
 
     <section className="overview-grid"><article className="panel collection-panel"><div className="panel-heading"><div><h2>Collection overview</h2><p>Collected by scheduled payment date</p></div><select value={period} onChange={event => setPeriod(event.target.value)} aria-label="Payment installment"><option>June installment</option><option>January installment</option><option>All installments</option></select></div><div className="collection-total"><strong>{compactCurrency(collectionTotal)}</strong><span><i/> {collectionTotal ? '76.4%' : '0%'} of target</span></div><div className="progress-track"><span style={{ width: collectionTotal ? '76.4%' : '0%' }}/></div><div className="progress-labels"><span>₹0</span><strong>Target {compactCurrency(targetTotal)}</strong></div><div className="chart-wrap"><div className="chart-y"><span>{compactCurrency(targetTotal)}</span><span>{compactCurrency(targetTotal * 2 / 3)}</span><span>{compactCurrency(targetTotal / 3)}</span><span>₹0</span></div><div className="chart"><div className="chart-grid"><i/><i/><i/><i/></div><svg viewBox="0 0 620 130" preserveAspectRatio="none" className="chart-svg"><defs><linearGradient id="fill" x1="0" x2="0" y1="0" y2="1"><stop offset="0%" stopColor="var(--chart-indigo)" stopOpacity=".2"/><stop offset="100%" stopColor="var(--chart-indigo)" stopOpacity="0"/></linearGradient><linearGradient id="collectionLine" x1="0" x2="1" y1="0" y2="0"><stop offset="0%" stopColor="var(--chart-red)"/><stop offset="25%" stopColor="var(--chart-gold)"/><stop offset="50%" stopColor="var(--chart-green)"/><stop offset="75%" stopColor="var(--chart-purple)"/><stop offset="100%" stopColor="var(--chart-indigo)"/></linearGradient></defs><path className="chart-fill" d={areaPath}/><path className="chart-line" d={linePath}/>{chartPoints.map((point, index) => <circle key={index} cx={point.x} cy={point.y} r="2"/>)}</svg><div className="chart-x"><span>{period === 'January installment' ? '1st Jan' : period === 'June installment' ? '1st Jun' : '1st'}</span><span>{period === 'January installment' ? '3rd Jan' : period === 'June installment' ? '3rd Jun' : '3rd'}</span><span>{period === 'January installment' ? '5th Jan' : period === 'June installment' ? '5th Jun' : '5th'}</span><span>{period === 'January installment' ? '7th Jan' : period === 'June installment' ? '7th Jun' : '7th'}</span><span>{period === 'January installment' ? '10th Jan' : period === 'June installment' ? '10th Jun' : '10th'}</span></div></div></div><div className="chart-legend"><span><i className="legend-paid"/> Amount paid</span><span><i className="legend-target"/> Payment deadline · 10th</span></div></article>
-      <article className="panel breakdown-panel"><div className="panel-heading"><button className="fee-breakdown-link" onClick={onFeeStructure}><span>Fee collection by course</span><small>Collected across courses</small></button><button className="more-button" aria-label="Course collection options" onClick={() => onNotice('Course collection options are up to date.')}>···</button></div><div className="donut-area"><div className="donut"><div><strong>₹4.83L</strong><span>Total collected</span></div></div></div><div className="breakdown-list"><div><span className="category-dot dot-purple"/><span className="category-name">BBA (LU)</span><strong>₹1,44,795</strong><small>30%</small></div><div><span className="category-dot dot-blue"/><span className="category-name">B.Com (Hons.)</span><strong>₹96,530</strong><small>20%</small></div><div><span className="category-dot dot-orange"/><span className="category-name">BBA (AKTU)</span><strong>₹1,20,663</strong><small>25%</small></div><div><span className="category-dot dot-gray"/><span className="category-name">MBA</span><strong>₹1,20,662</strong><small>25%</small></div></div></article></section>
+      <article className="panel breakdown-panel">
+        <div className="panel-heading">
+          <button className="fee-breakdown-link" onClick={onFeeStructure}><span>Fee collection by course</span><small>Collected across courses</small></button>
+          <button className="more-button" aria-label="Refresh course collections" title="Refresh course collections" onClick={() => setCourseCollectionRefreshKey(key => key + 1)}>···</button>
+        </div>
+        <div className="donut-area"><div className="donut" style={{ background: donutBackground }}><div><strong>{courseCollections ? compactCurrency(courseCollections.totalCollected) : '—'}</strong><span>Total collected</span></div></div></div>
+        <div className="breakdown-list">
+          {courseCollections?.courses.map((course, index) => <div key={course.courseId}>
+            <span className="category-dot" style={{ backgroundColor: courseColors[index % courseColors.length] }}/>
+            <span className="category-name">{course.courseName}</span>
+            <strong>{currency.format(course.amount)}</strong>
+            <small>{Math.round(course.sharePercent)}%</small>
+          </div>)}
+          {!courseCollections && !courseCollectionError && <p className="course-collection-message">Loading course collections…</p>}
+          {courseCollectionError && <p className="course-collection-message" role="alert">{courseCollectionError}</p>}
+          {courseCollections?.courses.length === 0 && <p className="course-collection-message">No course collections recorded.</p>}
+        </div>
+      </article></section>
 
     <footer className="page-footer"><span>© 2026 ICCMRT Fee Management</span><span>Need help? <a href="mailto:support@iccmrt.edu.in">Contact support</a></span></footer>
   </>

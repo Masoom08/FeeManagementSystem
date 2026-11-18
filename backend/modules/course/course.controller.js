@@ -36,9 +36,19 @@ async function updateCourse(req, res, next) {
   }
 }
 
+async function deleteCourse(req, res, next) {
+  try {
+    const course = await courseService.deactivateCourse(req.params.id);
+    res.status(200).json({ success: true, data: course });
+  } catch (err) {
+    next(err);
+  }
+}
+
 module.exports = {
   createCourse,
   listCourses,
   getCourse,
   updateCourse,
+  deleteCourse,
 };

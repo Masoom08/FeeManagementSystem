@@ -16,7 +16,7 @@ const routeByPage: Record<DashboardPageName, string> = {
   'Late fee waivers': '/admin/waivers',
 }
 const ROLE_STORAGE_KEY = 'iccmrt-user-role'
-type UserRole = 'TEACHER' | 'SUPERADMIN'
+type UserRole = 'ADMIN' | 'SUPERADMIN'
 
 function pageFromPath(path: string): DashboardPageName {
   if (path.startsWith('/admin/students')) return 'Students'
@@ -70,7 +70,7 @@ function App() {
   }
 
   if (signedIn && pathname.startsWith('/admin')) {
-    const role = (sessionStorage.getItem(ROLE_STORAGE_KEY) as UserRole | null) ?? 'TEACHER'
+    const role = (sessionStorage.getItem(ROLE_STORAGE_KEY) as UserRole | null) ?? 'ADMIN'
     const requestedPage = pageFromPath(pathname)
     const restrictedPage = ['Courses', 'Academic years', 'Semesters'].includes(requestedPage)
     const page = role !== 'SUPERADMIN' && restrictedPage ? 'Overview' : requestedPage

@@ -87,7 +87,7 @@ async function login(email, password) {
 
 function verifyToken(token) {
   const claims = readSignedToken(token);
-  return claims && claims.email && ["TEACHER", "SUPERADMIN"].includes(claims.role) ? claims : null;
+  return claims && claims.email && ["ADMIN", "SUPERADMIN"].includes(claims.role) ? claims : null;
 }
 
 function verifyStudentToken(token) {

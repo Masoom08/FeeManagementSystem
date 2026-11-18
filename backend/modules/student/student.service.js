@@ -151,6 +151,9 @@ async function updateStudent(id, data) {
   }
 
   const patch = {};
+  for (const field of ["name", "phoneNumber", "whatsappNumber", "email", "fatherName", "branch", "isHosteller", "studyYear"]) {
+    if (data[field] !== undefined) patch[field] = data[field];
+  }
   if (data.enrolmentNumber) {
     patch.enrolmentNumber = data.enrolmentNumber;
   }
@@ -162,6 +165,10 @@ async function updateStudent(id, data) {
   }
   if (data.status === "LEFT") {
     patch.leftOn = data.leftOn ? parseISODate(data.leftOn) : todayUTC();
+  } else if (data.status === "ACTIVE") {
+    patch.leftOn = null;
+  } else if (data.leftOn) {
+    patch.leftOn = parseISODate(data.leftOn);
   }
 
   const becameHosteller = data.isHosteller === true && !existing.isHosteller;
@@ -179,6 +186,10 @@ async function updateStudent(id, data) {
     throw err;
   }
   return loadStudent(id);
+}
+
+async function archiveStudent(id) {
+  return updateStudent(id, { status: "LEFT" });
 }
 
 function cellText(value) {
@@ -298,8 +309,8 @@ async function previewImport(file) {
       prisma.academicYear.findUnique({ where: { label: value.academicYearLabel } }),
       prisma.student.findUnique({ where: { registrationNumber: value.registrationNumber } }),
     ]);
-    if (!course) {
-      errors.push({ path: "courseCode", message: "course not found" });
+    if (!course || !course.active) {
+      errors.push({ path: "courseCode", message: course ? "course is inactive" : "course not found" });
     }
     if (!year) {
       errors.push({ path: "academicYearLabel", message: "academic year not found" });
@@ -419,6 +430,7 @@ module.exports = {
   searchStudents,
   getStudent,
   updateStudent,
+  archiveStudent,
   previewImport,
   commitImport,
 };

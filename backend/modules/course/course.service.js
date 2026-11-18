@@ -54,9 +54,21 @@ async function updateCourse(id, data) {
   }
 }
 
+async function deactivateCourse(id) {
+  const course = await prisma.course.findUnique({
+    where: { id },
+    include: { _count: { select: { students: true, feeStructures: true } } },
+  });
+  if (!course) throw notFoundError();
+  if (course._count.students || course._count.feeStructures) return updateCourse(id, { active: false });
+  await prisma.course.delete({ where: { id } });
+  return { id, deleted: true };
+}
+
 module.exports = {
   createCourse,
   listCourses,
   getCourse,
   updateCourse,
+  deactivateCourse,
 };

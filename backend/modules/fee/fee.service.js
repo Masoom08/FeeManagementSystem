@@ -35,6 +35,31 @@ function listAcademicYears() {
   return prisma.academicYear.findMany({ orderBy: { id: "asc" } });
 }
 
+async function updateAcademicYear(id, data) {
+  const existing = await prisma.academicYear.findUnique({ where: { id } });
+  if (!existing) throw notFound("ACADEMIC_YEAR_NOT_FOUND");
+  const startDate = data.startDate ? parseISODate(data.startDate) : existing.startDate;
+  const endDate = data.endDate ? parseISODate(data.endDate) : existing.endDate;
+  if (endDate <= startDate) throw badRequest("INVALID_DATE_RANGE", [{ path: "endDate", message: "endDate must be after startDate" }]);
+  try {
+    return await prisma.academicYear.update({ where: { id }, data: { ...data, startDate, endDate } });
+  } catch (err) {
+    if (err.code === "P2002") throw conflict("DUPLICATE_ACADEMIC_YEAR");
+    throw err;
+  }
+}
+
+async function deleteAcademicYear(id) {
+  const existing = await prisma.academicYear.findUnique({ where: { id } });
+  if (!existing) throw notFound("ACADEMIC_YEAR_NOT_FOUND");
+  const counts = await prisma.academicYear.findUnique({ where: { id }, include: { _count: { select: { semesters: true, feeStructures: true, feeAccounts: true, students: true } } } });
+  if (Object.values(counts._count).some(Boolean)) {
+    throw conflict("ACADEMIC_YEAR_IN_USE", [{ message: "This batch is linked to students, fee accounts, semesters, or fee structures and cannot be deleted." }]);
+  }
+  await prisma.academicYear.delete({ where: { id } });
+  return { id, deleted: true };
+}
+
 async function createSemester(data) {
   const year = await prisma.academicYear.findUnique({ where: { id: data.academicYearId } });
   if (!year) {
@@ -62,6 +87,32 @@ function listSemesters() {
   return prisma.semester.findMany({ orderBy: { id: "asc" } });
 }
 
+async function updateSemester(id, data) {
+  const existing = await prisma.semester.findUnique({ where: { id } });
+  if (!existing) throw notFound("SEMESTER_NOT_FOUND");
+  const patch = { ...data };
+  if (data.dueDate) patch.dueDate = parseISODate(data.dueDate);
+  if (data.fineEndDate) patch.fineEndDate = parseISODate(data.fineEndDate);
+  if (data.fineEndDate === null) patch.fineEndDate = null;
+  try {
+    return await prisma.semester.update({ where: { id }, data: patch });
+  } catch (err) {
+    if (err.code === "P2002") throw conflict("DUPLICATE_SEMESTER");
+    throw err;
+  }
+}
+
+async function deleteSemester(id) {
+  const existing = await prisma.semester.findUnique({ where: { id } });
+  if (!existing) throw notFound("SEMESTER_NOT_FOUND");
+  const counts = await prisma.semester.findUnique({ where: { id }, include: { _count: { select: { feeStructures: true, ledgerEntries: true, students: true } } } });
+  if (Object.values(counts._count).some(Boolean)) {
+    throw conflict("SEMESTER_IN_USE", [{ message: "This semester is linked to students, fee structures, or fee ledger entries and cannot be deleted." }]);
+  }
+  await prisma.semester.delete({ where: { id } });
+  return { id, deleted: true };
+}
+
 async function createFeeStructure(data) {
   const [course, year, semester] = await Promise.all([
     prisma.course.findUnique({ where: { id: data.courseId } }),
@@ -70,6 +121,9 @@ async function createFeeStructure(data) {
   ]);
   if (!course) {
     throw notFound("COURSE_NOT_FOUND");
+  }
+  if (!course.active) {
+    throw conflict("COURSE_INACTIVE", [{ message: "This course is inactive and cannot be used for a new fee structure." }]);
   }
   if (!year) {
     throw notFound("ACADEMIC_YEAR_NOT_FOUND");
@@ -87,8 +141,38 @@ async function createFeeStructure(data) {
   }
 }
 
-function listFeeStructures() {
-  return prisma.feeStructure.findMany({ orderBy: { id: "asc" } });
+function listFeeStructures(academicYearId) {
+  return prisma.feeStructure.findMany({
+    where: academicYearId ? { academicYearId } : {},
+    orderBy: [{ courseId: "asc" }, { semesterId: "asc" }, { component: "asc" }],
+  });
+}
+
+async function updateFeeStructure(id, data) {
+  const existing = await prisma.feeStructure.findUnique({ where: { id } });
+  if (!existing) throw notFound("FEE_STRUCTURE_NOT_FOUND");
+  const next = { ...existing, ...data };
+  const [course, year, semester] = await Promise.all([
+    prisma.course.findUnique({ where: { id: next.courseId } }),
+    prisma.academicYear.findUnique({ where: { id: next.academicYearId } }),
+    prisma.semester.findUnique({ where: { id: next.semesterId } }),
+  ]);
+  if (!course) throw notFound("COURSE_NOT_FOUND");
+  if (!year) throw notFound("ACADEMIC_YEAR_NOT_FOUND");
+  if (!semester || semester.academicYearId !== next.academicYearId) throw notFound("SEMESTER_NOT_FOUND");
+  try {
+    return await prisma.feeStructure.update({ where: { id }, data });
+  } catch (err) {
+    if (err.code === "P2002") throw conflict("DUPLICATE_FEE_STRUCTURE");
+    throw err;
+  }
+}
+
+async function deleteFeeStructure(id) {
+  const existing = await prisma.feeStructure.findUnique({ where: { id } });
+  if (!existing) throw notFound("FEE_STRUCTURE_NOT_FOUND");
+  await prisma.feeStructure.delete({ where: { id } });
+  return { id, deleted: true };
 }
 
 function listHostelRates() {
@@ -309,10 +393,16 @@ async function adjustDeposit(accountId, data) {
 module.exports = {
   createAcademicYear,
   listAcademicYears,
+  updateAcademicYear,
+  deleteAcademicYear,
   createSemester,
   listSemesters,
+  updateSemester,
+  deleteSemester,
   createFeeStructure,
   listFeeStructures,
+  updateFeeStructure,
+  deleteFeeStructure,
   listHostelRates,
   getAccount,
   runFines,

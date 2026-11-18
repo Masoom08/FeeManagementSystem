@@ -111,6 +111,74 @@ async function unpaidReport(courseId) {
     .filter((student) => student.duesOutstanding > 0);
 }
 
+async function dashboardSummary() {
+  const [payments, studentCount, students] = await Promise.all([
+    prisma.paymentAttempt.aggregate({
+      where: { status: "SUCCESS" },
+      _sum: { amount: true },
+      _count: { _all: true },
+    }),
+    prisma.student.count(),
+    prisma.student.findMany({
+      select: { feeAccounts: { select: { ledgerEntries: true } } },
+    }),
+  ]);
+  let pendingPayments = 0;
+  let pendingAmount = 0;
+  for (const student of students) {
+    const outstanding = student.feeAccounts.reduce(
+      (sum, account) => sum + balances(account.ledgerEntries).duesOutstanding,
+      0
+    );
+    if (outstanding > 0) pendingPayments += 1;
+    pendingAmount += student.feeAccounts.reduce(
+      (sum, account) => sum + Math.max(0, balances(account.ledgerEntries).duesOutstanding),
+      0
+    );
+  }
+  return {
+    totalAmountCollected: payments._sum.amount || 0,
+    paymentsReceived: payments._count._all,
+    pendingPayments,
+    pendingAmount,
+    totalStudentCount: studentCount,
+  };
+}
+
+async function courseCollectionSummary() {
+  const [courses, allocations] = await Promise.all([
+    prisma.course.findMany({
+      select: { id: true, courseName: true },
+      orderBy: { id: "asc" },
+    }),
+    prisma.paymentAllocation.findMany({
+      where: { paymentAttempt: { is: { status: "SUCCESS" } } },
+      select: {
+        amount: true,
+        feeAccount: { select: { student: { select: { courseId: true } } } },
+      },
+    }),
+  ]);
+  const amountsByCourse = new Map();
+  for (const allocation of allocations) {
+    const courseId = allocation.feeAccount.student.courseId;
+    amountsByCourse.set(courseId, (amountsByCourse.get(courseId) || 0) + allocation.amount);
+  }
+  const totalCollected = [...amountsByCourse.values()].reduce((sum, amount) => sum + amount, 0);
+  return {
+    totalCollected,
+    courses: courses.map((course) => {
+      const amount = amountsByCourse.get(course.id) || 0;
+      return {
+        courseId: course.id,
+        courseName: course.courseName,
+        amount,
+        sharePercent: totalCollected ? Math.round((amount / totalCollected) * 10000) / 100 : 0,
+      };
+    }),
+  };
+}
+
 async function failedPaymentsReport() {
   const payments = await prisma.paymentAttempt.findMany({
     where: { status: "FAILED" },
@@ -284,6 +352,8 @@ async function reconciliationReport(courseId) {
 }
 
 module.exports = {
+  dashboardSummary,
+  courseCollectionSummary,
   paymentsReport,
   unpaidReport,
   failedPaymentsReport,

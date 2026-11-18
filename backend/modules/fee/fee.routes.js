@@ -7,14 +7,20 @@ const { requireSuperAdmin } = require("../../middleware/authenticate");
 const academicYears = express.Router();
 academicYears.post("/", requireSuperAdmin, validate({ body: schemas.createAcademicYearBody }), controller.createAcademicYear);
 academicYears.get("/", controller.listAcademicYears);
+academicYears.patch("/:id", requireSuperAdmin, validate({ params: schemas.idParams, body: schemas.updateAcademicYearBody }), controller.updateAcademicYear);
+academicYears.delete("/:id", requireSuperAdmin, validate({ params: schemas.idParams }), controller.deleteAcademicYear);
 
 const semesters = express.Router();
 semesters.post("/", requireSuperAdmin, validate({ body: schemas.createSemesterBody }), controller.createSemester);
 semesters.get("/", controller.listSemesters);
+semesters.patch("/:id", requireSuperAdmin, validate({ params: schemas.idParams, body: schemas.updateSemesterBody }), controller.updateSemester);
+semesters.delete("/:id", requireSuperAdmin, validate({ params: schemas.idParams }), controller.deleteSemester);
 
 const feeStructures = express.Router();
 feeStructures.post("/", requireSuperAdmin, validate({ body: schemas.createFeeStructureBody }), controller.createFeeStructure);
-feeStructures.get("/", controller.listFeeStructures);
+feeStructures.get("/", validate({ query: schemas.feeStructuresQuery }), controller.listFeeStructures);
+feeStructures.patch("/:id", requireSuperAdmin, validate({ params: schemas.idParams, body: schemas.updateFeeStructureBody }), controller.updateFeeStructure);
+feeStructures.delete("/:id", requireSuperAdmin, validate({ params: schemas.idParams }), controller.deleteFeeStructure);
 
 const hostelRates = express.Router();
 hostelRates.get("/", controller.listHostelRates);

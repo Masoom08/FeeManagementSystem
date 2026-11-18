@@ -12,6 +12,10 @@ const createAcademicYearBody = z
   })
   .strict();
 
+const updateAcademicYearBody = createAcademicYearBody.partial().strict().refine((value) => Object.keys(value).length > 0, {
+  message: "At least one field is required", path: ["body"],
+});
+
 const createSemesterBody = z
   .object({
     academicYearId: z.number().int().positive(),
@@ -21,6 +25,15 @@ const createSemesterBody = z
     fineEndDate: isoDate.optional(),
   })
   .strict();
+
+const updateSemesterBody = z.object({
+  name: name.optional(),
+  dueDate: isoDate.optional(),
+  graceDays: z.number().int().min(0).optional(),
+  fineEndDate: isoDate.nullable().optional(),
+}).strict().refine((value) => Object.keys(value).length > 0, {
+  message: "At least one field is required", path: ["body"],
+});
 
 const createFeeStructureBody = z
   .object({
@@ -34,6 +47,14 @@ const createFeeStructureBody = z
     amount: positiveAmount("amount"),
   })
   .strict();
+
+const updateFeeStructureBody = createFeeStructureBody.partial().strict().refine((value) => Object.keys(value).length > 0, {
+  message: "At least one field is required", path: ["body"],
+});
+
+const feeStructuresQuery = z.object({
+  academicYearId: z.coerce.number().int().positive().optional(),
+}).strict();
 
 const runFinesBody = z
   .object({
@@ -74,8 +95,12 @@ const adjustDepositBody = z
 
 module.exports = {
   createAcademicYearBody,
+  updateAcademicYearBody,
   createSemesterBody,
+  updateSemesterBody,
   createFeeStructureBody,
+  updateFeeStructureBody,
+  feeStructuresQuery,
   runFinesBody,
   waiveFineBody,
   refundDepositBody,

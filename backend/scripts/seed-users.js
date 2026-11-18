@@ -11,7 +11,7 @@ async function main() {
     id INTEGER NOT NULL AUTO_INCREMENT,
     email VARCHAR(120) NOT NULL,
     password_hash VARCHAR(255) NOT NULL,
-    role ENUM('TEACHER', 'SUPERADMIN') NOT NULL,
+    role ENUM('ADMIN', 'SUPERADMIN') NOT NULL,
     active BOOLEAN NOT NULL DEFAULT TRUE,
     created_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
     UNIQUE KEY users_email_key (email),
@@ -33,7 +33,7 @@ async function main() {
 
   const passwordHash = await hashPassword("12345678");
   for (const user of [
-    { email: "admin@gmail.com", role: "TEACHER" },
+    { email: "admin@gmail.com", role: "ADMIN" },
     { email: "superadmin@gmail.com", role: "SUPERADMIN" },
   ]) {
     await pool.execute(

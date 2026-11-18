@@ -21,6 +21,11 @@ const updateStudent = asyncRoute(async (req, res) => {
   res.status(200).json({ success: true, data: student });
 });
 
+const deleteStudent = asyncRoute(async (req, res) => {
+  const student = await studentService.archiveStudent(req.params.id);
+  res.status(200).json({ success: true, data: student });
+});
+
 const previewImport = asyncRoute(async (req, res) => {
   const batch = await studentService.previewImport(req.file);
   res.status(200).json({ success: true, data: batch });
@@ -36,6 +41,7 @@ module.exports = {
   searchStudents,
   getStudent,
   updateStudent,
+  deleteStudent,
   previewImport,
   commitImport,
 };

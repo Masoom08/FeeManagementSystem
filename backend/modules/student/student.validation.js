@@ -49,8 +49,15 @@ const createStudentBody = z
 
 const updateStudentBody = z
   .object({
+    name: personName.optional(),
+    phoneNumber: phone("phoneNumber").optional(),
+    whatsappNumber: phone("whatsappNumber").optional(),
+    email: email.optional(),
+    fatherName: z.string().trim().min(1, "fatherName is required").max(120).optional(),
+    branch: z.string().trim().min(1, "branch is required").max(80).optional(),
     enrolmentNumber: z.string().trim().min(1, "enrolmentNumber is required").max(40).optional(),
     isHosteller: z.boolean({ invalid_type_error: "isHosteller must be a boolean" }).optional(),
+    studyYear: z.number().int().positive("studyYear must be a positive integer").optional(),
     status: z.enum(["ACTIVE", "LEFT", "COMPLETED"], {
       errorMap: () => ({ message: "status must be ACTIVE, LEFT, or COMPLETED" }),
     }).optional(),

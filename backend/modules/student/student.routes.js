@@ -28,5 +28,6 @@ router.post("/", requireSuperAdmin, validate({ body: schemas.createStudentBody }
 router.get("/", validate({ query: schemas.searchQuery }), controller.searchStudents);
 router.get("/:id", validate({ params: schemas.idParams }), controller.getStudent);
 router.patch("/:id", requireSuperAdmin, validate({ params: schemas.idParams, body: schemas.updateStudentBody }), controller.updateStudent);
+router.delete("/:id", requireSuperAdmin, validate({ params: schemas.idParams }), controller.deleteStudent);
 
 module.exports = router;

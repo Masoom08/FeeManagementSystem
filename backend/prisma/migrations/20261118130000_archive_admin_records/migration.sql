@@ -1,0 +1,3 @@
+ALTER TABLE `academic_years` ADD COLUMN `active` BOOLEAN NOT NULL DEFAULT true;
+ALTER TABLE `semesters` ADD COLUMN `active` BOOLEAN NOT NULL DEFAULT true;
+ALTER TABLE `fee_structures` ADD COLUMN `active` BOOLEAN NOT NULL DEFAULT true;

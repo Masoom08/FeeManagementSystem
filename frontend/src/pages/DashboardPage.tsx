@@ -57,7 +57,7 @@ export function DashboardPage({ onLogout, initialPage, role, onNavigate }: Dashb
         </button>)}
       </nav>
       <div className="sidebar-bottom">
-        <button className="profile" onClick={onLogout}><span className="avatar avatar-profile">{role === 'SUPERADMIN' ? 'SA' : 'A'}</span><span className="profile-copy"><strong>{role === 'SUPERADMIN' ? 'Super Admin' : 'Admin'}</strong><small>{role === 'SUPERADMIN' ? 'Administrator' : 'Staff account'}</small></span><Icon name="logout" size={17}/></button>
+        <button className="profile" onClick={onLogout}><span className="avatar avatar-profile">{role === 'SUPERADMIN' ? 'SA' : 'A'}</span><span className="profile-copy"><strong>{role === 'SUPERADMIN' ? 'Super Admin' : 'Admin'}</strong><small>{role === 'SUPERADMIN' ? 'Administrator' : 'Teacher account'}</small></span><Icon name="logout" size={17}/></button>
       </div>
     </aside>
 

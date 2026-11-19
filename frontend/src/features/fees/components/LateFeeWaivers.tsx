@@ -88,7 +88,7 @@ export function LateFeeWaivers() {
   return <section className="waivers-page" aria-labelledby="waivers-title">
     <div className="waivers-page-heading">
       <div><div className="eyebrow">FEE SUPPORT</div><h1 id="waivers-title">Late fee waivers</h1><p>Review unpaid students and waive late fines when approved.</p></div>
-      <div className="waiver-heading-actions"><span className="waiver-prototype-tag">Admin action</span><button className="waiver-download-button" onClick={() => downloadWaivedStudents(waivedStudents, waivers)} disabled={waivedCount === 0}><Icon name="download" size={17}/> Download waived list <span>{waivedCount}</span></button></div>
+      <div className="waiver-heading-actions"><button className="waiver-download-button" onClick={() => downloadWaivedStudents(waivedStudents, waivers)} disabled={waivedCount === 0}><Icon name="download" size={17}/> Download waived list <span>{waivedCount}</span></button></div>
     </div>
 
     {notice && <div className="waiver-notice" role="status"><Icon name="check" size={18}/><span>{notice}</span><button aria-label="Dismiss message" onClick={() => setNotice('')}>×</button></div>}

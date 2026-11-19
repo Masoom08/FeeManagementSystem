@@ -278,6 +278,69 @@ async function getReceipt(paymentId) {
   };
 }
 
+async function listPaymentHistory() {
+  const payments = await prisma.paymentAttempt.findMany({
+    where: { status: "SUCCESS" },
+    orderBy: [{ paidOn: "desc" }, { id: "desc" }],
+    include: {
+      allocations: {
+        orderBy: { id: "asc" },
+        include: {
+          feeAccount: {
+            include: {
+              student: {
+                include: {
+                  course: true,
+                  academicYear: true,
+                },
+              },
+            },
+          },
+        },
+      },
+      ledgerEntries: { include: { semester: { include: { academicYear: { select: { label: true } } } } } },
+    },
+  });
+  return payments.flatMap((payment) => payment.allocations.flatMap((allocation) => {
+    const student = allocation.feeAccount.student;
+    const ledgerRows = payment.ledgerEntries
+      .filter((entry) => entry.feeAccountId === allocation.feeAccountId && entry.bucket === allocation.bucket)
+      .filter((entry) => entry.semester);
+    const periods = [...ledgerRows.reduce((grouped, entry) => {
+      const key = entry.semesterId;
+      const period = grouped.get(key) || {
+        name: entry.semester.name,
+        academicYear: entry.semester.academicYear.label,
+        amount: 0,
+      };
+      period.amount += entry.amount;
+      grouped.set(key, period);
+      return grouped;
+    }, new Map()).values()];
+    const paymentRows = periods.length ? periods : [{ name: null, academicYear: null, amount: allocation.amount }];
+    return paymentRows.map((period) => ({
+      paymentId: payment.id,
+      receiptNo: payment.receiptNo,
+      paidOn: payment.paidOn,
+      method: payment.method,
+      amount: period.amount,
+      bucket: allocation.bucket,
+      product: allocation.feeAccount.product,
+      semester: period.name,
+      semesterAcademicYear: period.academicYear,
+      student: {
+        id: student.id,
+        name: student.name,
+        registrationNumber: student.registrationNumber,
+        courseId: student.courseId,
+        courseName: student.course.courseName,
+        batch: student.academicYear.label,
+        studyYear: student.studyYear,
+      },
+    }));
+  }));
+}
+
 module.exports = {
   createPayment,
   callback,
@@ -285,4 +348,5 @@ module.exports = {
   completeMockPayment,
   failMockPayment,
   getReceipt,
+  listPaymentHistory,
 };

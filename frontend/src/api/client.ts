@@ -10,6 +10,7 @@ export type ApiReminder = { studentId: number; registrationNumber: string; name:
 export type ApiReminderSendResult = { sent: Array<{ studentId: number; channel: string; reminderId: number }>; failed: Array<{ studentId: number; channel: string; reason: string }> }
 export type ApiDashboardSummary = { totalAmountCollected: number; paymentsReceived: number; pendingPayments: number; pendingAmount: number; totalStudentCount: number }
 export type ApiCourseCollectionSummary = { totalCollected: number; courses: Array<{ courseId: number; courseName: string; amount: number; sharePercent: number }> }
+export type ApiPaymentHistoryRow = { paymentId: number; receiptNo: string | null; paidOn: string; method: string; amount: number; bucket: 'DUES' | 'DEPOSIT'; product: 'ACADEMIC' | 'HOSTEL'; semester: string | null; semesterAcademicYear: string | null; student: { id: number; name: string; registrationNumber: string; courseId: number; courseName: string; batch: string; studyYear: number } }
 
 export type ApiStudentCourse = Pick<ApiCourse, 'id' | 'courseCode' | 'courseName'> & { lateFeePerDay: number }
 export type ApiStudentSummary = { id: number; registrationNumber: string; enrolmentNumber: string | null; name: string; phoneNumber: string; whatsappNumber: string; email: string; fatherName: string; branch: string; courseId: number; academicYearId: number; admissionSemesterId: number; studyYear: number; status: string; isHosteller: boolean; duesOutstanding: number; course: ApiStudentCourse; academicYear: ApiAcademicYear; admissionSemester: ApiSemester; accounts: ApiFeeAccount[] }
@@ -72,6 +73,7 @@ export const api = {
     method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ method: 'CASH', ...payload }),
   }),
   receipt: (paymentId: number) => request<ApiReceipt>(`/receipts/${paymentId}`),
+  paymentHistory: () => request<ApiPaymentHistoryRow[]>('/payments/history'),
   createCourse: (payload: { courseCode: string; courseName: string; affiliation: 'AKTU' | 'LU'; lateFeePerDay: number }) => request<ApiCourse>('/courses', {
     method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload),
   }),

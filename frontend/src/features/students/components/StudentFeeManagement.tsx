@@ -13,7 +13,6 @@ type LiveStudentFeeRecord = StudentFeeRecord & { apiStudentId: number; academicA
 type FeeRow = LiveStudentFeeRecord & SemesterFee
 const reminderHistoryKey = 'iccmrt-reminder-history'
 const reminderMessage = 'Dear student, our records show an outstanding current semester fee balance. Please contact the accounts office or complete your payment. If you have already paid, kindly ignore this message.'
-const demoCourses = ['BBA (LU)', 'B.Com (Hons.)', 'MBA (AKTU)', 'BBA (AKTU)']
 
 const currency = new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 })
 
@@ -49,8 +48,8 @@ function toFeeRecord(student: ApiStudentSummary, years: ApiAcademicYear[], semes
 }
 
 async function loadStudentRoster() {
-  const [students, years, semesters, courses] = await Promise.all([api.students(), api.academicYears(), api.semesters(), api.courses()])
-  return { records: students.filter(student => student.status !== 'LEFT').map(student => toFeeRecord(student, years, semesters)), courses: courses.map(item => item.courseName) }
+  const [students, years, semesters] = await Promise.all([api.students(), api.academicYears(), api.semesters()])
+  return students.filter(student => student.status !== 'LEFT').map(student => toFeeRecord(student, years, semesters))
 }
 
 function toReminderLogs(rows: Awaited<ReturnType<typeof api.reminders>>, students: LiveStudentFeeRecord[]): ReminderLog[] {
@@ -146,7 +145,6 @@ function exportStudents(rows: StudentFeeRecord[], status: StatusFilter) {
 
 export function StudentFeeManagement({ onNotice, view, onAddStudent, canImportStudents = false, refreshKey = 0 }: StudentFeeManagementProps) {
   const [apiRecords, setApiRecords] = useState<LiveStudentFeeRecord[]>([])
-  const [apiCourses, setApiCourses] = useState<string[]>([])
   const [loadingStudents, setLoadingStudents] = useState(true)
   const [studentApiError, setStudentApiError] = useState('')
   const [course, setCourse] = useState('All courses')
@@ -179,10 +177,9 @@ export function StudentFeeManagement({ onNotice, view, onAddStudent, canImportSt
   useEffect(() => {
     let active = true
     loadStudentRoster()
-      .then(({ records, courses }) => {
+      .then(records => {
         if (!active) return
         setApiRecords(records)
-        setApiCourses(courses)
         setLoadingStudents(false)
         api.reminders().then(rows => { if (active) setReminderHistory(toReminderLogs(rows, records)) }).catch(() => undefined)
       })
@@ -213,8 +210,15 @@ export function StudentFeeManagement({ onNotice, view, onAddStudent, canImportSt
     if (!fee) return []
     return [{ ...student, ...fee }]
   }), [apiRecords, course, batch, studyYear, semester, query])
-  const courses = apiCourses.length ? apiCourses : demoCourses
   const batches = Array.from(new Set(apiRecords.map(student => String(student.batch)))).sort((a, b) => b.localeCompare(a))
+  const batchRecords = apiRecords.filter(student => batch === 'All batches' || String(student.batch) === batch)
+  const availableCourses = Array.from(new Set(batchRecords.map(student => student.course))).sort()
+  const courseRecords = batchRecords.filter(student => course === 'All courses' || student.course === course)
+  const availableStudyYears = Array.from(new Set(courseRecords.map(student => student.studyYear))).sort((a, b) => a - b)
+  const studyYearRecords = courseRecords.filter(student => studyYear === 'All years' || student.studyYear === Number(studyYear))
+  const availableSemesters = Array.from(new Set(studyYearRecords.flatMap(student => student.semesterFees.map(item => item.semester))))
+    .filter(item => studyYear === 'All years' || Number(item.match(/semester\s+(\d+)/i)?.[1]) >= (Number(studyYear) - 1) * 2 + 1 && Number(item.match(/semester\s+(\d+)/i)?.[1]) <= Number(studyYear) * 2)
+    .sort((a, b) => Number(a.match(/semester\s+(\d+)/i)?.[1] ?? 0) - Number(b.match(/semester\s+(\d+)/i)?.[1] ?? 0))
   const paidCount = courseRows.filter(student => student.status === 'Paid').length
   const unpaidRows = courseRows.filter(student => student.status === 'Unpaid')
   const visibleRows = status === 'All' ? courseRows : courseRows.filter(student => student.status === status)
@@ -252,9 +256,7 @@ export function StudentFeeManagement({ onNotice, view, onAddStudent, canImportSt
       setStudentImportBatch(null)
       onNotice(`${result.students.length} student${result.students.length === 1 ? '' : 's'} added successfully.`)
       try {
-        const roster = await loadStudentRoster()
-        setApiRecords(roster.records)
-        setApiCourses(roster.courses)
+        setApiRecords(await loadStudentRoster())
       } catch {
         onNotice('Students were added, but the roster could not be refreshed. Reload the page to see them.')
       }
@@ -276,9 +278,7 @@ export function StudentFeeManagement({ onNotice, view, onAddStudent, canImportSt
     setEditingStudent(null)
     onNotice('Student details updated.')
     try {
-      const roster = await loadStudentRoster()
-      setApiRecords(roster.records)
-      setApiCourses(roster.courses)
+      setApiRecords(await loadStudentRoster())
     } catch {
       onNotice('Student details were updated, but the roster could not be refreshed. Reload the page to see the latest values.')
     }
@@ -328,7 +328,7 @@ export function StudentFeeManagement({ onNotice, view, onAddStudent, canImportSt
       } catch {
         onNotice('Payment saved, but its receipt could not be loaded. You can retry from the payment record.')
       }
-      loadStudentRoster().then(roster => { setApiRecords(roster.records); setApiCourses(roster.courses) }).catch(() => onNotice('Payment was saved, but the roster could not be refreshed. Reload the page to see the latest balance.'))
+      loadStudentRoster().then(setApiRecords).catch(() => onNotice('Payment was saved, but the roster could not be refreshed. Reload the page to see the latest balance.'))
     } catch (error) {
       onNotice(error instanceof Error ? `Could not record payment: ${error.message}` : 'Could not record payment.')
     } finally {
@@ -355,13 +355,13 @@ export function StudentFeeManagement({ onNotice, view, onAddStudent, canImportSt
     </div>
 
     <div className="panel student-list-panel">
-      <div className="student-list-title"><div><h2>Student list & semester fees</h2><p>Fee status for the selected semester · fees shown in INR</p></div></div>
+      <div className="student-list-title"><div><h2>Current semester fees</h2><p>Outstanding and paid amounts for the selected semester · fees shown in INR</p></div></div>
       <div className="student-filter-row">
         <label className="student-filter search-filter"><span>Search student</span><div><Icon name="search" size={18}/><input value={query} onChange={event => setQuery(event.target.value)} placeholder="Name or registration no."/></div></label>
-        <label className="student-filter"><span>Batch / academic year</span><select value={batch} onChange={event => setBatch(event.target.value)}><option>All batches</option>{batches.map(item => <option key={item} value={item}>{item}</option>)}</select></label>
-        <label className="student-filter"><span>Study year</span><select value={studyYear} onChange={event => setStudyYear(event.target.value)}><option>All years</option><option value="1">Year 1</option><option value="2">Year 2</option><option value="3">Year 3</option></select></label>
-        <label className="student-filter"><span>Course</span><select value={course} onChange={event => setCourse(event.target.value)}><option>All courses</option>{courses.map(item => <option key={item}>{item}</option>)}</select></label>
-        <label className="student-filter"><span>Semester fee status</span><select value={semester} onChange={event => setSemester(event.target.value)}><option>All semesters</option>{Array.from(new Set(apiRecords.flatMap(student => student.semesterFees.map(item => item.semester)))).sort().map(item => <option key={item}>{item}</option>)}</select></label>
+        <label className="student-filter"><span>Batch / academic year</span><select value={batch} onChange={event => { setBatch(event.target.value); setCourse('All courses'); setStudyYear('All years'); setSemester('All semesters') }}><option>All batches</option>{batches.map(item => <option key={item} value={item}>{item}</option>)}</select></label>
+        <label className="student-filter"><span>Course</span><select value={course} disabled={batch === 'All batches'} onChange={event => { setCourse(event.target.value); setStudyYear('All years'); setSemester('All semesters') }}><option>All courses</option>{availableCourses.map(item => <option key={item}>{item}</option>)}</select></label>
+        <label className="student-filter"><span>Study year</span><select value={studyYear} disabled={batch === 'All batches' || course === 'All courses'} onChange={event => { setStudyYear(event.target.value); setSemester('All semesters') }}><option>All years</option>{availableStudyYears.map(item => <option key={item} value={item}>Year {item}</option>)}</select></label>
+        <label className="student-filter"><span>Semester fee status</span><select value={semester} disabled={batch === 'All batches' || course === 'All courses' || studyYear === 'All years'} onChange={event => setSemester(event.target.value)}><option>All semesters</option>{availableSemesters.map(item => <option key={item}>{item}</option>)}</select></label>
         <label className="student-filter"><span>Fee status</span><select value={status} onChange={event => setStatus(event.target.value as StatusFilter)}><option>All</option><option>Paid</option><option>Unpaid</option></select></label>
       </div>
 

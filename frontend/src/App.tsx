@@ -7,7 +7,8 @@ import './accessibility.css'
 
 const routeByPage: Record<DashboardPageName, string> = {
   Overview: '/admin',
-  Students: '/admin/students',
+  'Current fees': '/admin/current-fees',
+  'Fee history': '/admin/fee-history',
   'Fee structure': '/admin/fees',
   Courses: '/admin/courses',
   'Academic years': '/admin/academic-years',
@@ -19,7 +20,8 @@ const ROLE_STORAGE_KEY = 'iccmrt-user-role'
 type UserRole = 'ADMIN' | 'SUPERADMIN'
 
 function pageFromPath(path: string): DashboardPageName {
-  if (path.startsWith('/admin/students')) return 'Students'
+  if (path.startsWith('/admin/current-fees') || path.startsWith('/admin/students')) return 'Current fees'
+  if (path.startsWith('/admin/fee-history')) return 'Fee history'
   if (path.startsWith('/admin/fees')) return 'Fee structure'
   if (path.startsWith('/admin/courses')) return 'Courses'
   if (path.startsWith('/admin/academic-years')) return 'Academic years'

@@ -22,9 +22,15 @@ const getReceipt = asyncRoute(async (req, res) => {
   res.status(200).json({ success: true, data: receipt });
 });
 
+const listPaymentHistory = asyncRoute(async (req, res) => {
+  const history = await paymentService.listPaymentHistory();
+  res.status(200).json({ success: true, data: history });
+});
+
 module.exports = {
   createPayment,
   callback,
   verify,
   getReceipt,
+  listPaymentHistory,
 };

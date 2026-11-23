@@ -31,6 +31,16 @@ const commitImport = asyncRoute(async (req, res) => {
   res.status(201).json({ success: true, data: result });
 });
 
+const previewStudentDelete = asyncRoute(async (req, res) => {
+  const impact = await studentService.previewStudentDelete(req.params.id);
+  res.status(200).json({ success: true, data: impact });
+});
+
+const deleteStudent = asyncRoute(async (req, res) => {
+  const result = await studentService.deleteStudent(req.params.id);
+  res.status(200).json({ success: true, data: result });
+});
+
 module.exports = {
   createStudent,
   searchStudents,
@@ -38,4 +48,6 @@ module.exports = {
   updateStudent,
   previewImport,
   commitImport,
+  previewStudentDelete,
+  deleteStudent,
 };

@@ -16,6 +16,7 @@ const routeByPage: Record<DashboardPageName, string> = {
   'Late fee waivers': '/admin/waivers',
 }
 const ROLE_STORAGE_KEY = 'iccmrt-user-role'
+const EMAIL_STORAGE_KEY = 'iccmrt-user-email'
 type UserRole = 'TEACHER' | 'SUPERADMIN'
 
 function pageFromPath(path: string): DashboardPageName {
@@ -58,6 +59,7 @@ function App() {
     const result = await api.login(email, password)
     sessionStorage.setItem(AUTH_TOKEN_STORAGE_KEY, result.accessToken)
     sessionStorage.setItem(ROLE_STORAGE_KEY, result.user.role)
+    sessionStorage.setItem(EMAIL_STORAGE_KEY, email)
     setSignedIn(true)
     navigate('/admin')
   }
@@ -65,6 +67,7 @@ function App() {
   const signOut = () => {
     sessionStorage.removeItem(AUTH_TOKEN_STORAGE_KEY)
     sessionStorage.removeItem(ROLE_STORAGE_KEY)
+    sessionStorage.removeItem(EMAIL_STORAGE_KEY)
     setSignedIn(false)
     navigate('/login')
   }

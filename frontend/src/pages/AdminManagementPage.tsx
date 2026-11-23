@@ -1,6 +1,10 @@
-import { useCallback, useEffect, useState, type FormEvent } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
+import { useEffect, useState, type FormEvent } from 'react'
+import { DeleteConfirmDialog, type DeleteTarget } from '../components/DeleteConfirmDialog'
 import { Icon } from '../components/ui/AppIcon'
-import { api, type ApiAcademicYear, type ApiCourse, type ApiFeeStructure, type ApiSemester } from '../api/client'
+import { api, type ApiFeeStructure } from '../api/client'
+import { queryKeys, useAcademicYears, useCourses, useSemesters } from '../api/queries'
+import { semesterLabel, semestersBySession } from '../features/academic/labels'
 import './AdminManagementPage.css'
 
 export type ManagementListSection = 'Courses' | 'Academic years' | 'Semesters'
@@ -12,70 +16,60 @@ const formTitle: Record<ManagementFormSection, string> = {
   'Add semester': 'Add semester', 'Add fee structure': 'Add fee structure',
 }
 
-export function AdminManagementPage({ section, onCreate, onNotice, refreshKey }: {
+export function AdminManagementPage({ section, onCreate, onNotice }: {
   section: ManagementListSection
   onCreate: (section: ManagementFormSection) => void
   onNotice: (message: string) => void
-  refreshKey: number
 }) {
-  const [courses, setCourses] = useState<ApiCourse[]>([])
-  const [years, setYears] = useState<ApiAcademicYear[]>([])
-  const [semesters, setSemesters] = useState<ApiSemester[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState('')
+  const coursesQuery = useCourses()
+  const yearsQuery = useAcademicYears()
+  const semestersQuery = useSemesters()
+  const courses = coursesQuery.data ?? []
+  const years = yearsQuery.data ?? []
+  const semesters = semestersQuery.data ?? []
+  const loading = coursesQuery.isLoading || yearsQuery.isLoading || semestersQuery.isLoading
+  const error = coursesQuery.error || yearsQuery.error || semestersQuery.error
 
-  const refresh = useCallback(async () => {
-    const [courseRows, yearRows, semesterRows] = await Promise.all([api.courses(), api.academicYears(), api.semesters()])
-    setCourses(courseRows); setYears(yearRows); setSemesters(semesterRows)
-  }, [])
-
-  useEffect(() => {
-    let active = true
-    refresh().catch(reason => { if (active) setError(reason instanceof Error ? reason.message : 'Could not load management data') }).finally(() => { if (active) setLoading(false) })
-    return () => { active = false }
-  }, [refresh, refreshKey])
-
+  const [deleteTarget, setDeleteTarget] = useState<DeleteTarget | null>(null)
   const title = section
+  const deleteKind: DeleteTarget['kind'] = section === 'Courses' ? 'course' : section === 'Academic years' ? 'academicYear' : 'semester'
   const formFor: Record<ManagementListSection, ManagementFormSection> = {
     Courses: 'Add course', 'Academic years': 'Add academic year', Semesters: 'Add semester',
   }
 
   return <section className="admin-management-page">
     <div className="admin-management-heading"><div><div className="eyebrow">SUPER ADMIN</div><h1>{title}</h1><p>Manage {title.toLowerCase()} used by the student and fee workflows.</p></div><button className="primary-button" onClick={() => onCreate(formFor[section])}><Icon name="plus" size={17}/> Add {section === 'Courses' ? 'course' : section === 'Academic years' ? 'academic year' : 'semester'}</button></div>
-    {error && <div className="admin-form-error" role="alert">{error}</div>}
+    {error && <div className="admin-form-error" role="alert">{error instanceof Error ? error.message : 'Could not load management data'}</div>}
     {loading ? <div className="panel admin-management-empty">Loading {title.toLowerCase()}…</div> : <div className="panel admin-management-table-wrap">
-      {section === 'Courses' && <table className="admin-management-table"><thead><tr><th>CODE</th><th>COURSE</th><th>AFFILIATION</th><th>LATE FEE / DAY</th><th>STATUS</th></tr></thead><tbody>{courses.map(course => <tr key={course.id}><td>{course.courseCode}</td><td>{course.courseName}</td><td>{course.affiliation}</td><td>{currency.format(course.lateFeePerDay)}</td><td>{course.active ? 'Active' : 'Inactive'}</td></tr>)}</tbody></table>}
-      {section === 'Academic years' && <table className="admin-management-table"><thead><tr><th>LABEL</th><th>START DATE</th><th>END DATE</th></tr></thead><tbody>{years.map(year => <tr key={year.id}><td>{year.label}</td><td>{year.startDate.slice(0, 10)}</td><td>{year.endDate.slice(0, 10)}</td></tr>)}</tbody></table>}
-      {section === 'Semesters' && <table className="admin-management-table"><thead><tr><th>ACADEMIC YEAR</th><th>SEMESTER</th><th>DUE DATE</th><th>GRACE DAYS</th></tr></thead><tbody>{semesters.map(semester => <tr key={semester.id}><td>{years.find(year => year.id === semester.academicYearId)?.label ?? semester.academicYearId}</td><td>{semester.name}</td><td>{semester.dueDate.slice(0, 10)}</td><td>{semester.graceDays}</td></tr>)}</tbody></table>}
+      {section === 'Courses' && <table className="admin-management-table"><thead><tr><th>CODE</th><th>COURSE</th><th>AFFILIATION</th><th>LATE FEE / DAY</th><th>STATUS</th><th>ACTION</th></tr></thead><tbody>{courses.map(course => <tr key={course.id}><td>{course.courseCode}</td><td>{course.courseName}</td><td>{course.affiliation}</td><td>{currency.format(course.lateFeePerDay)}</td><td>{course.active ? 'Active' : 'Inactive'}</td><td><button type="button" className="row-delete-button" onClick={() => setDeleteTarget({ kind: deleteKind, id: course.id })}>Delete</button></td></tr>)}</tbody></table>}
+      {section === 'Academic years' && <table className="admin-management-table"><thead><tr><th>LABEL</th><th>START DATE</th><th>END DATE</th><th>ACTION</th></tr></thead><tbody>{years.map(year => <tr key={year.id}><td>{year.label}</td><td>{year.startDate.slice(0, 10)}</td><td>{year.endDate.slice(0, 10)}</td><td><button type="button" className="row-delete-button" onClick={() => setDeleteTarget({ kind: deleteKind, id: year.id })}>Delete</button></td></tr>)}</tbody></table>}
+      {section === 'Semesters' && <table className="admin-management-table"><thead><tr><th>TERM</th><th>DUE DATE</th><th>GRACE DAYS</th><th>ACTION</th></tr></thead>{semestersBySession(semesters, years).map(group => <tbody key={group.year.id}><tr className="semester-group"><th colSpan={4}>{group.year.label}</th></tr>{group.semesters.map(semester => <tr key={semester.id}><td>{semester.name}</td><td>{semester.dueDate.slice(0, 10)}</td><td>{semester.graceDays}</td><td><button type="button" className="row-delete-button" onClick={() => setDeleteTarget({ kind: deleteKind, id: semester.id })}>Delete</button></td></tr>)}</tbody>)}</table>}
       {((section === 'Courses' && courses.length === 0) || (section === 'Academic years' && years.length === 0) || (section === 'Semesters' && semesters.length === 0)) && <div className="admin-management-empty">No {title.toLowerCase()} found yet.</div>}
     </div>}
+    {deleteTarget && <DeleteConfirmDialog target={deleteTarget} onClose={() => setDeleteTarget(null)} onNotice={onNotice}/>}
   </section>
 }
 
-export function AdminManagementModal({ section, onClose, onSaved, onNotice }: {
+export function AdminManagementModal({ section, onClose, onNotice }: {
   section: ManagementFormSection
   onClose: () => void
-  onSaved: () => void
   onNotice: (message: string) => void
 }) {
-  const [courses, setCourses] = useState<ApiCourse[]>([])
-  const [years, setYears] = useState<ApiAcademicYear[]>([])
-  const [semesters, setSemesters] = useState<ApiSemester[]>([])
-  const [loading, setLoading] = useState(true)
+  const queryClient = useQueryClient()
+  const coursesQuery = useCourses()
+  const yearsQuery = useAcademicYears()
+  const semestersQuery = useSemesters()
+  const courses = coursesQuery.data ?? []
+  const years = yearsQuery.data ?? []
+  const semesters = semestersQuery.data ?? []
+  const loading = coursesQuery.isLoading || yearsQuery.isLoading || semestersQuery.isLoading
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
 
   useEffect(() => {
-    let active = true
-    Promise.all([api.courses(), api.academicYears(), api.semesters()])
-      .then(([courseRows, yearRows, semesterRows]) => {
-        if (!active) return
-        setCourses(courseRows); setYears(yearRows); setSemesters(semesterRows)
-      })
-      .catch(reason => { if (active) setError(reason instanceof Error ? reason.message : 'Could not load required options') })
-      .finally(() => { if (active) setLoading(false) })
-    return () => { active = false }
-  }, [])
+    const loadError = coursesQuery.error || yearsQuery.error || semestersQuery.error
+    if (loadError) setError(loadError instanceof Error ? loadError.message : 'Could not load required options')
+  }, [coursesQuery.error, yearsQuery.error, semestersQuery.error])
 
   useEffect(() => {
     const closeOnEscape = (event: KeyboardEvent) => { if (event.key === 'Escape' && !saving) onClose() }
@@ -106,8 +100,10 @@ export function AdminManagementModal({ section, onClose, onSaved, onNotice }: {
           admissionType: value('admissionType') as 'DIRECT' | 'COUNSELLING', isHosteller: form.get('isHosteller') === 'on', studyYear: Number(value('studyYear')),
         })
       }
+      const key = section === 'Add course' ? queryKeys.courses : section === 'Add academic year' ? queryKeys.academicYears : section === 'Add semester' ? queryKeys.semesters : section === 'Add fee structure' ? queryKeys.feeStructures : queryKeys.students
+      await queryClient.invalidateQueries({ queryKey: key })
+      if (section === 'Add student' || section === 'Add fee structure') await queryClient.invalidateQueries({ queryKey: queryKeys.reports })
       onNotice(`${formTitle[section].replace('Add ', '')} added.`)
-      onSaved()
       onClose()
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : 'Could not save this record')
@@ -125,7 +121,7 @@ export function AdminManagementModal({ section, onClose, onSaved, onNotice }: {
           <label><span>Course code</span><input name="courseCode" maxLength={20} required placeholder="e.g. BBA-LU" /></label>
           <label><span>Course name</span><input name="courseName" maxLength={120} required placeholder="e.g. BBA (LU)" /></label>
           <label><span>Affiliation</span><select name="affiliation" required><option value="LU">Lucknow University (LU)</option><option value="AKTU">AKTU</option></select></label>
-          <label><span>Late fee per day (INR)</span><input name="lateFeePerDay" type="number" min="1" step="1" defaultValue="10" required /></label>
+          <label><span>Late fee per day (INR)</span><input name="lateFeePerDay" type="number" min="1" step="1" defaultValue="5" required /></label>
         </>}
         {section === 'Add academic year' && <>
           <label><span>Academic year label</span><input name="label" maxLength={20} required placeholder="2027-28" /></label>
@@ -142,7 +138,7 @@ export function AdminManagementModal({ section, onClose, onSaved, onNotice }: {
         {section === 'Add fee structure' && <>
           <label><span>Course</span><select name="courseId" required defaultValue=""><option value="" disabled>Select a course</option>{courses.map(course => <option key={course.id} value={course.id}>{course.courseName} ({course.courseCode})</option>)}</select></label>
           <label><span>Academic year</span><select name="academicYearId" required defaultValue=""><option value="" disabled>Select an academic year</option>{years.map(year => <option key={year.id} value={year.id}>{year.label}</option>)}</select></label>
-          <label><span>Semester</span><select name="semesterId" required defaultValue=""><option value="" disabled>Select a semester</option>{semesters.map(semester => <option key={semester.id} value={semester.id}>{years.find(year => year.id === semester.academicYearId)?.label} · {semester.name}</option>)}</select></label>
+          <label><span>Semester</span><select name="semesterId" required defaultValue=""><option value="" disabled>Select a semester</option>{semestersBySession(semesters, years).flatMap(group => group.semesters).map(semester => <option key={semester.id} value={semester.id}>{semesterLabel(semester, years)}</option>)}</select></label>
           <label><span>Component</span><select name="component" required><option value="ACADEMIC_FEE">Academic fee</option><option value="ACADEMIC_CAUTION">Academic caution deposit</option><option value="HOSTEL_FEE">Hostel fee</option><option value="HOSTEL_SECURITY">Hostel security deposit</option></select></label>
           <label><span>Study year</span><input name="studyYear" type="number" min="1" max="10" step="1" defaultValue="1" required /></label>
           <label><span>Amount (INR)</span><input name="amount" type="number" min="1" step="1" required /></label>
@@ -157,7 +153,7 @@ export function AdminManagementModal({ section, onClose, onSaved, onNotice }: {
           <label><span>Branch</span><input name="branch" maxLength={80} required placeholder="e.g. Management" /></label>
           <label><span>Course</span><select name="courseId" required defaultValue=""><option value="" disabled>Select a course</option>{courses.map(course => <option key={course.id} value={course.id}>{course.courseName}</option>)}</select></label>
           <label><span>Batch / academic year</span><select name="academicYearId" required defaultValue=""><option value="" disabled>Select an academic year</option>{years.map(year => <option key={year.id} value={year.id}>{year.label}</option>)}</select></label>
-          <label><span>Admission semester</span><select name="semesterId" required defaultValue=""><option value="" disabled>Select a semester</option>{semesters.map(semester => <option key={semester.id} value={semester.id}>{years.find(year => year.id === semester.academicYearId)?.label} · {semester.name}</option>)}</select></label>
+          <label><span>Admission semester</span><select name="semesterId" required defaultValue=""><option value="" disabled>Select a semester</option>{semestersBySession(semesters, years).flatMap(group => group.semesters).map(semester => <option key={semester.id} value={semester.id}>{semesterLabel(semester, years)}</option>)}</select></label>
           <label><span>Admission type</span><select name="admissionType"><option value="DIRECT">Direct</option><option value="COUNSELLING">Counselling</option></select></label>
           <label><span>Current study year</span><input name="studyYear" type="number" min="1" max="10" step="1" defaultValue="1" required /></label>
           <label className="admin-form-checkbox"><input name="isHosteller" type="checkbox" /><span>Hosteller</span></label>

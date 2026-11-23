@@ -15,5 +15,17 @@ router.patch(
   validate({ params: schemas.courseIdParams, body: schemas.updateCourseBody }),
   controller.updateCourse
 );
+router.get(
+  "/:id/delete-preview",
+  requireSuperAdmin,
+  validate({ params: schemas.courseIdParams }),
+  controller.previewCourseDelete
+);
+router.delete(
+  "/:id",
+  requireSuperAdmin,
+  validate({ params: schemas.courseIdParams }),
+  controller.deleteCourse
+);
 
 module.exports = router;

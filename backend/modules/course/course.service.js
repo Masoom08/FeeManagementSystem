@@ -1,4 +1,5 @@
 const prisma = require("../../lib/prisma");
+const cascadeDelete = require("../../lib/cascadeDelete");
 
 function duplicateCourseError() {
   const error = new Error("DUPLICATE_COURSE_CODE");
@@ -54,9 +55,19 @@ async function updateCourse(id, data) {
   }
 }
 
+function previewCourseDelete(id) {
+  return cascadeDelete.previewCourse(id);
+}
+
+function deleteCourse(id) {
+  return cascadeDelete.deleteCourse(id);
+}
+
 module.exports = {
   createCourse,
   listCourses,
   getCourse,
   updateCourse,
+  previewCourseDelete,
+  deleteCourse,
 };

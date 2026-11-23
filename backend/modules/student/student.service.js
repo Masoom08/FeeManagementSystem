@@ -1,5 +1,6 @@
 const ExcelJS = require("exceljs");
 const prisma = require("../../lib/prisma");
+const cascadeDelete = require("../../lib/cascadeDelete");
 const { badRequest, conflict, notFound } = require("../../lib/errors");
 const { balances } = require("../../lib/balance");
 const { parseISODate, todayUTC } = require("../../lib/dates");
@@ -414,6 +415,14 @@ async function commitImport(batchId) {
   };
 }
 
+function previewStudentDelete(id) {
+  return cascadeDelete.previewStudent(id);
+}
+
+function deleteStudent(id) {
+  return cascadeDelete.deleteStudent(id);
+}
+
 module.exports = {
   createStudent,
   searchStudents,
@@ -421,4 +430,6 @@ module.exports = {
   updateStudent,
   previewImport,
   commitImport,
+  previewStudentDelete,
+  deleteStudent,
 };

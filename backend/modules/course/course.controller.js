@@ -36,9 +36,29 @@ async function updateCourse(req, res, next) {
   }
 }
 
+async function previewCourseDelete(req, res, next) {
+  try {
+    const impact = await courseService.previewCourseDelete(req.params.id);
+    res.status(200).json({ success: true, data: impact });
+  } catch (err) {
+    next(err);
+  }
+}
+
+async function deleteCourse(req, res, next) {
+  try {
+    const result = await courseService.deleteCourse(req.params.id);
+    res.status(200).json({ success: true, data: result });
+  } catch (err) {
+    next(err);
+  }
+}
+
 module.exports = {
   createCourse,
   listCourses,
   getCourse,
   updateCourse,
+  previewCourseDelete,
+  deleteCourse,
 };

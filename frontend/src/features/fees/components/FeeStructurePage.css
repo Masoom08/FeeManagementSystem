@@ -14,3 +14,4 @@
 .fee-breakdown-popover{position:fixed;z-index:1000;transform:none;right:auto;max-height:min(260px,calc(100vh - 24px));overflow-y:auto}.fee-breakdown-popover strong{position:sticky;top:0;background:#fff}
 .fee-structure-title-row{display:flex;align-items:center;justify-content:space-between;gap:12px}.fee-structure-title-row button{height:40px;white-space:nowrap}@media(max-width:600px){.fee-structure-title-row{align-items:flex-start;flex-direction:column}.fee-structure-title-row button{width:100%}}
 .fee-structure-table th,.fee-structure-table td{border-color:#eceef3}.hostel-fee-table{border-collapse:collapse}.hostel-fee-table th,.hostel-fee-table td{border:1px solid #eceef3}
+.fee-session-table{text-align:left}.fee-session-table th,.fee-session-table td{text-align:left}.fee-session-table td:nth-child(n+3),.fee-session-table th:nth-child(n+3){text-align:center}

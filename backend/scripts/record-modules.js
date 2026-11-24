@@ -53,7 +53,8 @@ function studentBody(registrationNumber, name, email) {
     fatherName: `${name} Father`,
     branch: "Management",
     courseId,
-    academicYearId,
+    batchId,
+    sessionId,
     semesterId,
     admissionType: "DIRECT",
   };
@@ -82,7 +83,8 @@ execFileSync("docker", [
    TRUNCATE TABLE students;
    TRUNCATE TABLE fee_structures;
    TRUNCATE TABLE semesters;
-   TRUNCATE TABLE academic_years;
+   TRUNCATE TABLE batches;
+   TRUNCATE TABLE sessions;
    SET FOREIGN_KEY_CHECKS=1;`,
 ]);
 
@@ -107,20 +109,30 @@ const courseId = course.id;
 const year = run({
   doc: "fee",
   group: "Success",
-  title: "Create academic year",
+  title: "Create session",
   method: "POST",
-  path: "/api/academic-years",
+  path: "/api/sessions",
   body: { label: "2026-27", startDate: "2026-07-01", endDate: "2027-06-30" },
   expect: 201,
 }).json.data;
-const academicYearId = year.id;
+const sessionId = year.id;
+const batch = run({
+  doc: "student",
+  group: "Success",
+  title: "Create batch",
+  method: "POST",
+  path: "/api/batches",
+  body: { courseId, label: "2026-28", startDate: "2026-07-01", endDate: "2028-06-30" },
+  expect: 201,
+}).json.data;
+const batchId = batch.id;
 
 run({
   doc: "fee",
   group: "Success",
-  title: "List academic years",
+  title: "List sessions",
   method: "GET",
-  path: "/api/academic-years",
+  path: "/api/sessions",
   expect: 200,
 });
 
@@ -130,7 +142,7 @@ const semester = run({
   title: "Create semester",
   method: "POST",
   path: "/api/semesters",
-  body: { academicYearId, name: "SEMESTER_1", dueDate: "2026-07-01", graceDays: 5 },
+  body: { sessionId, name: "SEMESTER_1", dueDate: "2026-07-01", graceDays: 5 },
   expect: 201,
 }).json.data;
 const semesterId = semester.id;
@@ -157,7 +169,7 @@ for (const [component, amount] of structureInputs) {
     title: `Create ${component} structure`,
     method: "POST",
     path: "/api/fee-structures",
-    body: { courseId, academicYearId, semesterId, component, studyYear: 1, amount },
+    body: { courseId, sessionId, semesterId, component, studyYear: 1, amount },
     expect: 201,
   });
 }
@@ -177,7 +189,7 @@ run({
   title: "Unknown fee component",
   method: "POST",
   path: "/api/fee-structures",
-  body: { courseId, academicYearId, semesterId, component: "LIBRARY", studyYear: 1, amount: 1000 },
+  body: { courseId, sessionId, semesterId, component: "LIBRARY", studyYear: 1, amount: 1000 },
   expect: 400,
 });
 
@@ -187,7 +199,7 @@ run({
   title: "Fee amount of 0",
   method: "POST",
   path: "/api/fee-structures",
-  body: { courseId, academicYearId, semesterId, component: "ACADEMIC_FEE", studyYear: 2, amount: 0 },
+  body: { courseId, sessionId, semesterId, component: "ACADEMIC_FEE", studyYear: 2, amount: 0 },
   expect: 400,
 });
 
@@ -197,7 +209,7 @@ run({
   title: "Unknown course",
   method: "POST",
   path: "/api/fee-structures",
-  body: { courseId: 999999, academicYearId, semesterId, component: "ACADEMIC_FEE", studyYear: 1, amount: 1000 },
+  body: { courseId: 999999, sessionId, semesterId, component: "ACADEMIC_FEE", studyYear: 1, amount: 1000 },
   expect: 404,
 });
 
@@ -207,7 +219,7 @@ run({
   title: "Duplicate fee structure",
   method: "POST",
   path: "/api/fee-structures",
-  body: { courseId, academicYearId, semesterId, component: "ACADEMIC_FEE", studyYear: 1, amount: 10000 },
+  body: { courseId, sessionId, semesterId, component: "ACADEMIC_FEE", studyYear: 1, amount: 10000 },
   expect: 409,
 });
 
@@ -469,7 +481,7 @@ run({
     fatherName: "Father",
     branch: "Management",
     courseId,
-    academicYearId,
+    sessionId,
     semesterId,
     admissionType: "DIRECT",
   },
@@ -672,10 +684,11 @@ const headers = [
   "fatherName",
   "branch",
   "courseCode",
+  "batchLabel",
   "admissionType",
   "isHosteller",
   "studyYear",
-  "academicYearLabel",
+  "sessionLabel",
   "semesterName",
 ];
 
@@ -701,6 +714,7 @@ function sheetRow(registrationNumber, name, email, admissionType) {
     `${name} Father`,
     "Management",
     "AKTU01",
+    "2026-28",
     admissionType,
     "false",
     1,
@@ -714,7 +728,7 @@ function sheetRow(registrationNumber, name, email, admissionType) {
     sheetRow("REG-XLS", "Farah Khan", "farah@example.com", "DIRECT"),
   ]);
   const badFile = await writeSheet("students-bad.xlsx", [
-    ["", "No Reg", "9876543210", "9123456780", "noreg@example.com", "Father", "Management", "AKTU01", "DIRECT", "false", 1, "2026-27", "SEMESTER_1"],
+    ["", "No Reg", "9876543210", "9123456780", "noreg@example.com", "Father", "Management", "AKTU01", "2026-28", "DIRECT", "false", 1, "2026-27", "SEMESTER_1"],
   ]);
   const duplicateFile = await writeSheet("students-duplicate.xlsx", [
     sheetRow("REG-ONTIME", "Asha Copy", "copy@example.com", "COUNSELLING"),
@@ -969,7 +983,7 @@ function sheetRow(registrationNumber, name, email, admissionType) {
   });
 
   const intros = {
-    fee: "# Fee module\n\nAcademic years, semesters, fee structures, ledger balances, late fees, waivers, and deposit settlement. Amounts in these curls are sample rows, not hardcoded college fees. Responses are from one live run, in the order below.\n",
+    fee: "# Fee module\n\nSessions, semesters, fee structures, ledger balances, late fees, waivers, and deposit settlement. Amounts in these curls are sample rows, not hardcoded college fees. Responses are from one live run, in the order below.\n",
     student: "# Student module\n\nRegistration number is the unique key. The enrolment number is added on the same row. A valid workbook is previewed, then committed. Responses are from one live run.\n",
     payment: "# Payment module\n\nHDFC is a local callback. Challan stays pending until verify. Cash is recorded as success immediately. A repeated success callback does not post a second ledger line. Responses are from one live run.\n",
     reminder: "# Reminder module\n\nSMS and WhatsApp reminders are stored locally. No message provider is called. Responses are from one live run.\n",

@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react'
 import { Icon } from '../../../components/ui/AppIcon'
 import { studentFeeRecords, type SemesterFee, type StudentFeeRecord, type StudentFeeStatus } from '../../../data/mockData'
-import { api, type ApiAcademicYear, type ApiReceipt, type ApiSemester, type ApiStudentImportBatch, type ApiStudentSummary } from '../../../api/client'
+import { api, type ApiSession, type ApiReceipt, type ApiSemester, type ApiStudentImportBatch, type ApiStudentSummary } from '../../../api/client'
 import { InvoiceTemplate } from '../../payments/components/InvoiceTemplate'
 import './StudentFeeManagement.css'
 
@@ -9,18 +9,19 @@ type StatusFilter = 'All' | StudentFeeStatus
 type StudentFeeManagementProps = { onNotice: (message: string) => void; view: 'students' | 'reminders'; onAddStudent?: () => void; canImportStudents?: boolean; refreshKey?: number }
 type ReminderLog = { id: string; name: string; registrationNo: string; phone: string; course: string; semester: string; createdAt: string; message: string }
 type ReminderBatch = { id: string; recipients: number; course: string; semester: string; createdAt: string; message: string }
-type LiveStudentFeeRecord = StudentFeeRecord & { apiStudentId: number; academicAccountId: number; apiStudent: ApiStudentSummary; currentSemesterLabel: string }
+type LiveStudentFeeRecord = StudentFeeRecord & { apiStudentId: number; academicAccountId: number; accountIdsBySession: Record<string, number>; apiStudent: ApiStudentSummary; currentSemesterLabel: string; session: string }
 type FeeRow = LiveStudentFeeRecord & SemesterFee
 const reminderHistoryKey = 'iccmrt-reminder-history'
 const reminderMessage = 'Dear student, our records show an outstanding current semester fee balance. Please contact the accounts office or complete your payment. If you have already paid, kindly ignore this message.'
+const studentCourseTabs = ['All courses', 'B.Com', 'BBA (LU)', 'BBA (AKTU)', 'MBA (AKTU)']
 
 const currency = new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 })
 
-function toFeeRecord(student: ApiStudentSummary, years: ApiAcademicYear[], semesters: ApiSemester[]): LiveStudentFeeRecord {
-  const year = years.find(item => item.id === student.academicYearId)
+function toFeeRecord(student: ApiStudentSummary, years: ApiSession[], semesters: ApiSemester[]): LiveStudentFeeRecord {
+  const year = years.find(item => item.id === student.sessionId)
   const academicPeriodSemester = (student.studyYear - 1) * 2 + (new Date().getMonth() >= 6 ? 1 : 2)
   const currentSemester = semesters.find(semester =>
-    semester.academicYearId === student.academicYearId &&
+    semester.sessionId === student.sessionId &&
     semester.name.trim().toLowerCase() === `semester ${academicPeriodSemester}`,
   )
   const currentSemesterLabel = currentSemester
@@ -34,7 +35,7 @@ function toFeeRecord(student: ApiStudentSummary, years: ApiAcademicYear[], semes
     const balance = Math.max(0, lines.reduce((sum, line) => sum + (line.direction === 'INCREASE' ? line.amount : -line.amount), 0))
     const paid = Math.max(0, feeDue - balance)
     const payment = lines.filter(line => line.entryType === 'PAYMENT' && line.direction === 'DECREASE').at(-1)
-    const label = years.find(item => item.id === semester.academicYearId)?.label
+    const label = years.find(item => item.id === semester.sessionId)?.label
     return [{ semester: `${semester.name}${label ? ` (${label})` : ''}`, feeDue, amountPaid: paid, paymentDate: payment?.effectiveDate ?? null, dueDate: semester.dueDate, status: (balance === 0 ? 'Paid' : 'Unpaid') as StudentFeeStatus }]
   })
   const admissionSemesterLabel = `${student.admissionSemester.name}${year?.label ? ` (${year.label})` : ''}`
@@ -42,13 +43,14 @@ function toFeeRecord(student: ApiStudentSummary, years: ApiAcademicYear[], semes
     ?? semesterFees.find(fee => fee.semester === admissionSemesterLabel)
     ?? semesterFees[0]
     ?? { semester: 'No assessed semester', feeDue: 0, amountPaid: 0, paymentDate: null, dueDate: '', status: 'Unpaid' as const }
-  const startDate = year?.startDate.slice(0, 4) ?? ''
-  const endDate = year?.endDate.slice(0, 4) ?? ''
-  return { apiStudentId: student.id, academicAccountId: academicAccounts[0]?.id ?? 0, apiStudent: student, name: student.name, registrationNo: student.registrationNumber, phone: student.phoneNumber, course: student.course.courseName, batch: year?.label ?? String(student.academicYearId), studyYear: student.studyYear, startDate, endDate, semesterFees, currentSemesterLabel, ...firstFee, lateFee: 0 }
+  const startDate = student.batch.startDate.slice(0, 4)
+  const endDate = student.batch.endDate.slice(0, 4)
+  const accountIdsBySession = Object.fromEntries(academicAccounts.map(account => [years.find(item => item.id === account.sessionId)?.label ?? '', account.id]))
+  return { apiStudentId: student.id, academicAccountId: academicAccounts.find(account => account.sessionId === student.sessionId)?.id ?? academicAccounts[0]?.id ?? 0, accountIdsBySession, apiStudent: student, name: student.name, registrationNo: student.registrationNumber, phone: student.phoneNumber, course: student.course.courseName, batch: student.batch.label, studyYear: student.studyYear, startDate, endDate, semesterFees, currentSemesterLabel, session: year?.label ?? '—', ...firstFee, lateFee: 0 }
 }
 
 async function loadStudentRoster() {
-  const [students, years, semesters] = await Promise.all([api.students(), api.academicYears(), api.semesters()])
+  const [students, years, semesters] = await Promise.all([api.students(), api.sessions(), api.semesters()])
   return students.filter(student => student.status !== 'LEFT').map(student => toFeeRecord(student, years, semesters))
 }
 
@@ -86,6 +88,16 @@ function currentDateTime() {
   }
 }
 
+function matchesCourseTab(courseName: string, tab: string) {
+  if (tab === 'All courses') return true
+  const normalized = courseName.toLowerCase().replaceAll('.', '')
+  if (tab === 'B.Com') return normalized.includes('bcom') || normalized.includes('commerce')
+  if (tab === 'BBA (LU)') return normalized.includes('bba') && (normalized.includes('lu') || normalized.includes('lucknow'))
+  if (tab === 'BBA (AKTU)') return normalized.includes('bba') && normalized.includes('aktu')
+  if (tab === 'MBA (AKTU)') return normalized.includes('mba') && (normalized.includes('aktu') || normalized.trim() === 'mba')
+  return courseName === tab
+}
+
 function restoreReminderHistory(): ReminderLog[] {
   try {
     const saved = JSON.parse(localStorage.getItem(reminderHistoryKey) ?? '[]') as Array<ReminderLog | ReminderBatch>
@@ -112,17 +124,16 @@ function csvCell(value: string | number) {
   return `"${safe.replaceAll('"', '""')}"`
 }
 
-function exportStudents(rows: StudentFeeRecord[], status: StatusFilter) {
-  const heading = ['Student name', 'Registration number', 'Phone', 'Course', 'Batch', 'Study year', 'Start year', 'End year', 'Semester', 'Semester fee', 'Amount paid', 'Payment date', 'Balance due', 'Due date', 'Fee status']
+function exportStudents(rows: LiveStudentFeeRecord[], status: StatusFilter) {
+  const heading = ['Student name', 'Registration number', 'Phone', 'Course', 'Batch', 'Session', 'Study year', 'Semester', 'Semester fee', 'Amount paid', 'Payment date', 'Balance due', 'Due date', 'Fee status']
   const records = rows.map(student => [
     student.name,
     student.registrationNo,
     student.phone,
     student.course,
     student.batch,
+    student.session,
     `Year ${student.studyYear}`,
-    student.startDate.slice(-4),
-    student.endDate.slice(-4),
     student.semester,
     student.feeDue,
     student.amountPaid,
@@ -150,6 +161,7 @@ export function StudentFeeManagement({ onNotice, view, onAddStudent, canImportSt
   const [course, setCourse] = useState('All courses')
   const [batch, setBatch] = useState('All batches')
   const [studyYear, setStudyYear] = useState('All years')
+  const [sessionFilter, setSessionFilter] = useState('All sessions')
   const [semester, setSemester] = useState('All semesters')
   const [status, setStatus] = useState<StatusFilter>('All')
   const [query, setQuery] = useState('')
@@ -196,27 +208,30 @@ export function StudentFeeManagement({ onNotice, view, onAddStudent, canImportSt
   }, [reminderHistory])
 
   const courseRows = useMemo<FeeRow[]>(() => apiRecords.filter(student =>
-    (course === 'All courses' || student.course === course) &&
+    matchesCourseTab(student.course, course) &&
     (batch === 'All batches' || String(student.batch) === batch) &&
     (studyYear === 'All years' || student.studyYear === Number(studyYear)) &&
+    (sessionFilter === 'All sessions' || student.session === sessionFilter) &&
     (semester === 'All semesters' || student.semesterFees.some(item => item.semester === semester)) &&
     `${student.name} ${student.registrationNo}`.toLowerCase().includes(query.toLowerCase()),
   ).flatMap(student => {
     const fee = semester === 'All semesters'
       ? student.semesterFees.find(item => item.semester === student.currentSemesterLabel)
-        ?? student.semesterFees.find(item => item.semester === `${student.apiStudent.admissionSemester.name} (${student.batch})`)
+        ?? student.semesterFees.find(item => item.semester === `${student.apiStudent.admissionSemester.name} (${student.session})`)
         ?? student.semesterFees[0]
       : student.semesterFees.find(item => item.semester === semester)
     if (!fee) return []
-    return [{ ...student, ...fee }]
-  }), [apiRecords, course, batch, studyYear, semester, query])
+    const feeSession = fee.semester.match(/\(([^)]+)\)$/)?.[1] ?? student.session
+    return [{ ...student, ...fee, academicAccountId: student.accountIdsBySession[feeSession] ?? student.academicAccountId }]
+  }), [apiRecords, course, batch, studyYear, sessionFilter, semester, query])
   const batches = Array.from(new Set(apiRecords.map(student => String(student.batch)))).sort((a, b) => b.localeCompare(a))
   const batchRecords = apiRecords.filter(student => batch === 'All batches' || String(student.batch) === batch)
-  const availableCourses = Array.from(new Set(batchRecords.map(student => student.course))).sort()
-  const courseRecords = batchRecords.filter(student => course === 'All courses' || student.course === course)
+  const courseRecords = batchRecords.filter(student => matchesCourseTab(student.course, course))
   const availableStudyYears = Array.from(new Set(courseRecords.map(student => student.studyYear))).sort((a, b) => a - b)
   const studyYearRecords = courseRecords.filter(student => studyYear === 'All years' || student.studyYear === Number(studyYear))
-  const availableSemesters = Array.from(new Set(studyYearRecords.flatMap(student => student.semesterFees.map(item => item.semester))))
+  const availableSessions = Array.from(new Set(studyYearRecords.map(student => student.session))).sort((a, b) => b.localeCompare(a))
+  const sessionRecords = studyYearRecords.filter(student => sessionFilter === 'All sessions' || student.session === sessionFilter)
+  const availableSemesters = Array.from(new Set(sessionRecords.flatMap(student => student.semesterFees.map(item => item.semester))))
     .filter(item => studyYear === 'All years' || Number(item.match(/semester\s+(\d+)/i)?.[1]) >= (Number(studyYear) - 1) * 2 + 1 && Number(item.match(/semester\s+(\d+)/i)?.[1]) <= Number(studyYear) * 2)
     .sort((a, b) => Number(a.match(/semester\s+(\d+)/i)?.[1] ?? 0) - Number(b.match(/semester\s+(\d+)/i)?.[1] ?? 0))
   const paidCount = courseRows.filter(student => student.status === 'Paid').length
@@ -356,21 +371,22 @@ export function StudentFeeManagement({ onNotice, view, onAddStudent, canImportSt
 
     <div className="panel student-list-panel">
       <div className="student-list-title"><div><h2>Current semester fees</h2><p>Outstanding and paid amounts for the selected semester · fees shown in INR</p></div></div>
+      <div className="student-course-tabs" role="tablist" aria-label="Student course sections">{studentCourseTabs.map(tab => <button key={tab} type="button" role="tab" aria-selected={course === tab} className={course === tab ? 'active' : ''} onClick={() => { setCourse(tab); setStudyYear('All years'); setSessionFilter('All sessions'); setSemester('All semesters') }}>{tab}</button>)}</div>
       <div className="student-filter-row">
         <label className="student-filter search-filter"><span>Search student</span><div><Icon name="search" size={18}/><input value={query} onChange={event => setQuery(event.target.value)} placeholder="Name or registration no."/></div></label>
-        <label className="student-filter"><span>Batch / academic year</span><select value={batch} onChange={event => { setBatch(event.target.value); setCourse('All courses'); setStudyYear('All years'); setSemester('All semesters') }}><option>All batches</option>{batches.map(item => <option key={item} value={item}>{item}</option>)}</select></label>
-        <label className="student-filter"><span>Course</span><select value={course} disabled={batch === 'All batches'} onChange={event => { setCourse(event.target.value); setStudyYear('All years'); setSemester('All semesters') }}><option>All courses</option>{availableCourses.map(item => <option key={item}>{item}</option>)}</select></label>
-        <label className="student-filter"><span>Study year</span><select value={studyYear} disabled={batch === 'All batches' || course === 'All courses'} onChange={event => { setStudyYear(event.target.value); setSemester('All semesters') }}><option>All years</option>{availableStudyYears.map(item => <option key={item} value={item}>Year {item}</option>)}</select></label>
-        <label className="student-filter"><span>Semester fee status</span><select value={semester} disabled={batch === 'All batches' || course === 'All courses' || studyYear === 'All years'} onChange={event => setSemester(event.target.value)}><option>All semesters</option>{availableSemesters.map(item => <option key={item}>{item}</option>)}</select></label>
+        <label className="student-filter"><span>Batch</span><select value={batch} onChange={event => { setBatch(event.target.value); setStudyYear('All years'); setSessionFilter('All sessions'); setSemester('All semesters') }}><option>All batches</option>{batches.map(item => <option key={item} value={item}>{item}</option>)}</select></label>
+        <label className="student-filter"><span>Study year</span><select value={studyYear} disabled={batch === 'All batches' || course === 'All courses'} onChange={event => { setStudyYear(event.target.value); setSessionFilter('All sessions'); setSemester('All semesters') }}><option>All years</option>{availableStudyYears.map(item => <option key={item} value={item}>Year {item}</option>)}</select></label>
+        <label className="student-filter"><span>Session</span><select value={sessionFilter} disabled={batch === 'All batches'} onChange={event => { setSessionFilter(event.target.value); setSemester('All semesters') }}><option>All sessions</option>{availableSessions.map(item => <option key={item}>{item}</option>)}</select></label>
+        <label className="student-filter"><span>Semester fee status</span><select value={semester} disabled={batch === 'All batches' || course === 'All courses' || studyYear === 'All years' || sessionFilter === 'All sessions'} onChange={event => setSemester(event.target.value)}><option>All semesters</option>{availableSemesters.map(item => <option key={item}>{item}</option>)}</select></label>
         <label className="student-filter"><span>Fee status</span><select value={status} onChange={event => setStatus(event.target.value as StatusFilter)}><option>All</option><option>Paid</option><option>Unpaid</option></select></label>
       </div>
 
       <div className="student-export-row"><div className="export-caption download-caption"><Icon name="download" size={18}/><span>Download an Excel-compatible list</span></div><div className="export-buttons"><button className="export-all" onClick={() => exportStudents(courseRows, 'All')}><span>All</span><small>{courseRows.length}</small></button><button className="export-paid" onClick={() => exportStudents(courseRows.filter(student => student.status === 'Paid'), 'Paid')}><span>Paid</span><small>{paidCount}</small></button><button className="export-unpaid" onClick={() => exportStudents(unpaidRows, 'Unpaid')}><span>Unpaid</span><small>{unpaidRows.length}</small></button></div></div>
 
-      <div className="student-table-wrap"><table className="student-fee-table"><thead><tr><th>REGISTRATION NO.</th><th>STUDENT</th><th>BATCH</th><th>COURSE</th><th>YEAR</th><th>PERIOD (YEARS)</th><th>SEMESTER</th><th>SEMESTER FEE</th><th>PAID</th><th>PAYMENT DATE</th><th>BALANCE</th><th>STATUS</th><th>ACTION</th>{onAddStudent && <th>MANAGE</th>}</tr></thead><tbody>
+      <div className="student-table-wrap"><table className="student-fee-table"><thead><tr><th>REGISTRATION NO.</th><th>STUDENT</th><th>BATCH</th><th>COURSE</th><th>SESSION</th><th>STUDY YEAR</th><th>SEMESTER</th><th>SEMESTER FEE</th><th>PAID</th><th>PAYMENT DATE</th><th>BALANCE</th><th>STATUS</th><th>ACTION</th>{onAddStudent && <th>MANAGE</th>}</tr></thead><tbody>
         {visibleRows.map(student => {
           const balance = Math.max(0, student.feeDue - student.amountPaid)
-          return <tr key={student.registrationNo}><td>{student.registrationNo}</td><td><div className="student-cell"><span><strong>{student.name}</strong><small>{student.phone}</small></span></div></td><td>{student.batch}</td><td>{student.course}</td><td>Year {student.studyYear}</td><td>{student.startDate.slice(-4)} - {student.endDate.slice(-4)}</td><td>{student.semester}</td><td className="amount-cell">{currency.format(student.feeDue)}</td><td>{currency.format(student.amountPaid)}</td><td>{student.paymentDate ?? '-'}</td><td className={balance > 0 ? 'balance-due' : 'amount-cell'}>{currency.format(balance)}</td><td><span className={`status status-${student.status.toLowerCase()}`}><i/>{student.status}</span></td><td>{balance > 0 ? <button className="cash-payment-button" onClick={() => { const now = currentDateTime(); setCashStudent(student); setCashDate(now.date); setCashPaymentKey(crypto.randomUUID()); setCashAmount(String(balance)) }}>Record cash</button> : <span className="cash-paid-label">Paid in full</span>}</td>{onAddStudent && <td><div className="management-row-actions"><button onClick={() => setEditingStudent(student.apiStudent)}>Edit</button><button className="danger" onClick={() => void deleteStudentRecord(student)}>Delete</button></div></td>}</tr>
+          return <tr key={student.registrationNo}><td>{student.registrationNo}</td><td><div className="student-cell"><span><strong>{student.name}</strong><small>{student.phone}</small></span></div></td><td>{student.batch}</td><td>{student.course}</td><td>{student.session}</td><td>Year {student.studyYear}</td><td>{student.semester}</td><td className="amount-cell">{currency.format(student.feeDue)}</td><td>{currency.format(student.amountPaid)}</td><td>{student.paymentDate ?? '-'}</td><td className={balance > 0 ? 'balance-due' : 'amount-cell'}>{currency.format(balance)}</td><td><span className={`status status-${student.status.toLowerCase()}`}><i/>{student.status}</span></td><td>{balance > 0 ? <button className="cash-payment-button" onClick={() => { const now = currentDateTime(); setCashStudent(student); setCashDate(now.date); setCashPaymentKey(crypto.randomUUID()); setCashAmount(String(balance)) }}>Record cash</button> : <span className="cash-paid-label">Paid in full</span>}</td>{onAddStudent && <td><div className="management-row-actions"><button onClick={() => setEditingStudent(student.apiStudent)}>Edit</button><button className="danger" onClick={() => void deleteStudentRecord(student)}>Delete</button></div></td>}</tr>
         })}
       </tbody></table>{visibleRows.length === 0 && <div className="student-empty">{loadingStudents ? 'Loading students…' : 'No students match the selected filters.'}</div>}</div>
       <div className="student-list-footer"><span>Showing <strong>{visibleRows.length}</strong> of <strong>{courseRows.length}</strong> matching students</span><span>Fee due date: <strong>{visibleRows[0]?.dueDate ?? 'varies by semester'}</strong></span></div>
@@ -382,7 +398,7 @@ export function StudentFeeManagement({ onNotice, view, onAddStudent, canImportSt
     </section>}
 
     {smsOpen && <div className="modal-backdrop" role="presentation" onMouseDown={event => { if (event.target === event.currentTarget) setSmsOpen(false) }}><section className="sms-modal" role="dialog" aria-modal="true" aria-labelledby="sms-title"><div className="sms-modal-icon"><Icon name="bell" size={23}/></div><button className="modal-close" aria-label="Close" onClick={() => setSmsOpen(false)}>×</button><h2 id="sms-title">Remind unpaid students</h2><p className="sms-count">{unpaidRows.length} students · {course === 'All courses' ? 'all courses' : course} · {semester === 'All semesters' ? 'all semesters' : semester}</p><div className="sms-preview"><span>MESSAGE PREVIEW</span><p>{reminderMessage}</p></div><p className="sms-prototype-note">Sending submits this message to the configured SMS gateway for the selected students.</p><div className="sms-modal-actions"><button className="secondary-button" onClick={() => setSmsOpen(false)}>Cancel</button><button className="primary-button" onClick={() => void recordReminderBatch()} disabled={savingReminders}>{savingReminders ? 'Sending…' : 'Send SMS reminders'}</button></div></section></div>}
-    {studentImportOpen && <div className="modal-backdrop" role="presentation" onMouseDown={event => { if (event.target === event.currentTarget && !studentImportBusy) setStudentImportOpen(false) }}><section className="sms-modal student-import-modal" role="dialog" aria-modal="true" aria-labelledby="student-import-title"><div className="sms-modal-icon"><Icon name="upload" size={23}/></div><button className="modal-close" aria-label="Close" disabled={studentImportBusy} onClick={() => setStudentImportOpen(false)}>×</button><h2 id="student-import-title">Import students from Excel</h2><p className="sms-count">Upload an .xlsx file to add multiple students in one batch.</p><p className="student-import-fields"><strong>Make sure the Excel file has all required fields:</strong> registrationNumber, name, whatsappNumber, phoneNumber, email, fatherName, branch, courseCode, admissionType, isHosteller, studyYear, academicYearLabel, semesterName.</p><label className="student-import-file"><span>{studentImportFile?.name ?? 'Choose an Excel .xlsx file'}</span><input type="file" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" disabled={studentImportBusy} onChange={event => { setStudentImportFile(event.target.files?.[0] ?? null); setStudentImportBatch(null); setStudentImportError('') }}/></label>{studentImportBatch && <div className="student-import-results" role="status"><strong>{studentImportBatch.rows.filter(row => row.valid).length} of {studentImportBatch.rows.length} rows ready</strong>{studentImportBatch.rows.some(row => !row.valid) && <div className="student-import-errors">{studentImportBatch.rows.filter(row => !row.valid).map(row => <p key={row.rowNumber}>Row {row.rowNumber}: {row.errors?.map(item => `${item.path} ${item.message}`).join('; ')}</p>)}</div>}</div>}{studentImportError && <p className="student-import-error" role="alert">{studentImportError}</p>}<div className="sms-modal-actions"><button className="secondary-button" disabled={!studentImportFile || studentImportBusy} onClick={() => void previewStudentImport()}>{studentImportBusy ? 'Please wait…' : 'Check file'}</button><button className="primary-button" disabled={studentImportBusy || !studentImportBatch || studentImportBatch.rows.some(row => !row.valid)} onClick={() => void commitStudentImport()}>{studentImportBusy ? 'Adding…' : `Add ${studentImportBatch?.rows.length ?? 0} student${studentImportBatch?.rows.length === 1 ? '' : 's'}`}</button></div></section></div>}
+    {studentImportOpen && <div className="modal-backdrop" role="presentation" onMouseDown={event => { if (event.target === event.currentTarget && !studentImportBusy) setStudentImportOpen(false) }}><section className="sms-modal student-import-modal" role="dialog" aria-modal="true" aria-labelledby="student-import-title"><div className="sms-modal-icon"><Icon name="upload" size={23}/></div><button className="modal-close" aria-label="Close" disabled={studentImportBusy} onClick={() => setStudentImportOpen(false)}>×</button><h2 id="student-import-title">Import students from Excel</h2><p className="sms-count">Upload an .xlsx file to add multiple students in one batch.</p><p className="student-import-fields"><strong>Make sure the Excel file has all required fields:</strong> registrationNumber, name, whatsappNumber, phoneNumber, email, fatherName, branch, courseCode, batchLabel, sessionLabel, admissionType, isHosteller, studyYear, semesterName.</p><label className="student-import-file"><span>{studentImportFile?.name ?? 'Choose an Excel .xlsx file'}</span><input type="file" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" disabled={studentImportBusy} onChange={event => { setStudentImportFile(event.target.files?.[0] ?? null); setStudentImportBatch(null); setStudentImportError('') }}/></label>{studentImportBatch && <div className="student-import-results" role="status"><strong>{studentImportBatch.rows.filter(row => row.valid).length} of {studentImportBatch.rows.length} rows ready</strong>{studentImportBatch.rows.some(row => !row.valid) && <div className="student-import-errors">{studentImportBatch.rows.filter(row => !row.valid).map(row => <p key={row.rowNumber}>Row {row.rowNumber}: {row.errors?.map(item => `${item.path} ${item.message}`).join('; ')}</p>)}</div>}</div>}{studentImportError && <p className="student-import-error" role="alert">{studentImportError}</p>}<div className="sms-modal-actions"><button className="secondary-button" disabled={!studentImportFile || studentImportBusy} onClick={() => void previewStudentImport()}>{studentImportBusy ? 'Please wait…' : 'Check file'}</button><button className="primary-button" disabled={studentImportBusy || !studentImportBatch || studentImportBatch.rows.some(row => !row.valid)} onClick={() => void commitStudentImport()}>{studentImportBusy ? 'Adding…' : `Add ${studentImportBatch?.rows.length ?? 0} student${studentImportBatch?.rows.length === 1 ? '' : 's'}`}</button></div></section></div>}
     {cashStudent && <div className="modal-backdrop" role="presentation" onMouseDown={event => { if (event.target === event.currentTarget) setCashStudent(null) }}><section className="sms-modal cash-payment-modal" role="dialog" aria-modal="true" aria-labelledby="cash-payment-title"><div className="sms-modal-icon cash-modal-icon"><Icon name="wallet" size={23}/></div><button className="modal-close" aria-label="Close" onClick={() => setCashStudent(null)}>×</button><h2 id="cash-payment-title">Record cash payment</h2><p className="sms-count">{cashStudent.name} · {cashStudent.registrationNo} · {cashStudent.semester}</p><div className="cash-balance-note">Remaining balance: <strong>{currency.format(Math.max(0, cashStudent.feeDue - cashStudent.amountPaid))}</strong></div><div className="cash-payment-fields"><label><span>Amount received (INR)</span><input type="number" min="1" max={Math.max(0, cashStudent.feeDue - cashStudent.amountPaid)} step="1" value={cashAmount} onChange={event => setCashAmount(event.target.value)} required/></label><label><span>Payment date</span><input type="date" value={cashDate} onChange={event => setCashDate(event.target.value)} required/></label><label><span>Payment method</span><input value="Cash" readOnly/></label></div><p className="cash-payment-note">Saving this entry updates the student’s paid amount, balance, and fee status.</p><div className="sms-modal-actions"><button className="secondary-button" onClick={() => setCashStudent(null)}>Cancel</button><button className="primary-button" disabled={!Number(cashAmount) || Number(cashAmount) <= 0 || Number(cashAmount) > cashStudent.feeDue - cashStudent.amountPaid || !cashDate || savingPayment} onClick={() => void saveCashPayment()}>{savingPayment ? 'Saving…' : 'Save payment'}</button></div></section></div>}
     {receipt && <InvoiceTemplate receipt={receipt} onClose={() => setReceipt(null)}/>}
     {editingStudent && <StudentEditModal student={editingStudent} onClose={() => setEditingStudent(null)} onSave={saveStudentChanges}/>}
@@ -399,7 +415,7 @@ function StudentEditModal({ student, onClose, onSave }: { student: ApiStudentSum
     catch (reason) { setError(reason instanceof Error ? reason.message : 'Could not update student details.') }
     finally { setSaving(false) }
   }
-  return <div className="admin-modal-backdrop" role="presentation" onMouseDown={event => { if (event.target === event.currentTarget && !saving) onClose() }}><section className="admin-modal" role="dialog" aria-modal="true" aria-labelledby="student-edit-title"><header className="admin-modal-header"><div><div className="eyebrow">SUPER ADMIN · STUDENTS</div><h2 id="student-edit-title">Edit student</h2></div><button className="admin-modal-close" aria-label="Close dialog" disabled={saving} onClick={onClose}>×</button></header><p className="sms-count">{student.registrationNumber} · {student.course.courseName} · {student.academicYear.label}</p>{error && <div className="admin-form-error" role="alert">{error}</div>}<form className="admin-form" onSubmit={submit}>
+  return <div className="admin-modal-backdrop" role="presentation" onMouseDown={event => { if (event.target === event.currentTarget && !saving) onClose() }}><section className="admin-modal" role="dialog" aria-modal="true" aria-labelledby="student-edit-title"><header className="admin-modal-header"><div><div className="eyebrow">SUPER ADMIN · STUDENTS</div><h2 id="student-edit-title">Edit student</h2></div><button className="admin-modal-close" aria-label="Close dialog" disabled={saving} onClick={onClose}>×</button></header><p className="sms-count">{student.registrationNumber} · {student.course.courseName} · Batch {student.batch.label} · Session {student.session.label}</p>{error && <div className="admin-form-error" role="alert">{error}</div>}<form className="admin-form" onSubmit={submit}>
     <label><span>Student name</span><input name="name" defaultValue={student.name} maxLength={120} required/></label><label><span>Phone number</span><input name="phoneNumber" type="tel" defaultValue={student.phoneNumber} minLength={8} maxLength={20} required/></label><label><span>WhatsApp number</span><input name="whatsappNumber" type="tel" defaultValue={student.whatsappNumber} minLength={8} maxLength={20} required/></label><label><span>Email</span><input name="email" type="email" defaultValue={student.email} maxLength={120} required/></label><label><span>Father / guardian name</span><input name="fatherName" defaultValue={student.fatherName} maxLength={120} required/></label><label><span>Branch</span><input name="branch" defaultValue={student.branch} maxLength={80} required/></label><label><span>Enrolment number (optional)</span><input name="enrolmentNumber" defaultValue={student.enrolmentNumber ?? ''} maxLength={40}/></label><label><span>Current study year</span><input name="studyYear" type="number" min="1" max="10" defaultValue={student.studyYear} required/></label><label className="admin-form-checkbox"><input name="isHosteller" type="checkbox" defaultChecked={student.isHosteller}/><span>Hosteller</span></label><div className="admin-form-actions"><button type="button" className="secondary-button" disabled={saving} onClick={onClose}>Cancel</button><button type="submit" className="primary-button" disabled={saving}>{saving ? 'Saving…' : 'Save changes'}</button></div></form></section></div>
 }
 

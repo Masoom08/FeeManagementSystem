@@ -61,7 +61,7 @@ export function PaymentOptionsTable({ currentFee, fullPaymentAmount, payableSeme
   }
 
   return (
-    <ScrollView horizontal showsHorizontalScrollIndicator contentContainerStyle={styles.horizontalContent}>
+    <ScrollView horizontal showsHorizontalScrollIndicator keyboardShouldPersistTaps="handled" contentContainerStyle={styles.horizontalContent}>
       <View style={styles.table}>
         <View style={styles.headerRow}>
           <Text style={[styles.headerCell, styles.optionColumn]}>PAYMENT OPTION</Text>

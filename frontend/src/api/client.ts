@@ -2,22 +2,28 @@ const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:300
 export const AUTH_TOKEN_STORAGE_KEY = 'iccmrt-superadmin-token'
 
 export type ApiCourse = { id: number; courseCode: string; courseName: string; affiliation: string; lateFeePerDay: number; active: boolean }
-export type ApiAcademicYear = { id: number; label: string; startDate: string; endDate: string }
-export type ApiSemester = { id: number; academicYearId: number; name: string; dueDate: string; graceDays: number; fineEndDate?: string | null }
-export type ApiFeeStructure = { id: number; courseId: number; academicYearId: number; semesterId: number; component: 'ACADEMIC_FEE' | 'ACADEMIC_CAUTION' | 'HOSTEL_FEE' | 'HOSTEL_SECURITY'; studyYear: number; amount: number }
+export type ApiSession = { id: number; label: string; startDate: string; endDate: string }
+export type ApiBatch = { id: number; courseId: number; label: string; startDate: string; endDate: string; course?: Pick<ApiCourse, 'id' | 'courseName' | 'courseCode'> }
+export type ApiSemester = { id: number; sessionId: number; name: string; dueDate: string; graceDays: number; fineEndDate?: string | null }
+export type ApiFeeStructure = { id: number; courseId: number; sessionId: number; semesterId: number; component: 'ACADEMIC_FEE' | 'ACADEMIC_CAUTION' | 'HOSTEL_FEE' | 'HOSTEL_SECURITY'; studyYear: number; amount: number }
+export type ApiLateFeeDashboard = {
+  asOfDate: string
+  courses: Array<{ id: number; courseName: string; lateFeePerDay: number; deadlines: Array<{ semesterType: 'ODD' | 'EVEN'; month: number; day: number }> }>
+  students: Array<{ studentId: number; accountId: number; name: string; registrationNumber: string; phoneNumber: string; courseId: number; courseName: string; batch: string; studyYear: number; semester: string; semesterId: number; semesterFee: number; dueDate: string; daysOverdue: number; ratePerDay: number; fineAmount: number; waivedAmount: number; pendingFine: number; waivedAt: string | null }>
+}
 export type ApiHostelRate = { id: number; condition: string; occupancy: string; annualFee: number }
 export type ApiReminder = { studentId: number; registrationNumber: string; name: string; duesOutstanding: number; reminders: Array<{ id: number; channel: string; sentAt: string; actedBy: string }> }
 export type ApiReminderSendResult = { sent: Array<{ studentId: number; channel: string; reminderId: number }>; failed: Array<{ studentId: number; channel: string; reason: string }> }
 export type ApiDashboardSummary = { totalAmountCollected: number; paymentsReceived: number; pendingPayments: number; pendingAmount: number; totalStudentCount: number }
 export type ApiCourseCollectionSummary = { totalCollected: number; courses: Array<{ courseId: number; courseName: string; amount: number; sharePercent: number }> }
-export type ApiPaymentHistoryRow = { paymentId: number; receiptNo: string | null; paidOn: string; method: string; amount: number; bucket: 'DUES' | 'DEPOSIT'; product: 'ACADEMIC' | 'HOSTEL'; semester: string | null; semesterAcademicYear: string | null; student: { id: number; name: string; registrationNumber: string; courseId: number; courseName: string; batch: string; studyYear: number } }
+export type ApiPaymentHistoryRow = { paymentId: number; receiptNo: string | null; paidOn: string; method: string; amount: number; bucket: 'DUES' | 'DEPOSIT'; product: 'ACADEMIC' | 'HOSTEL'; semester: string | null; semesterSession: string | null; studyYear: number; student: { id: number; name: string; registrationNumber: string; courseId: number; courseName: string; batch: string; studyYear: number } }
 
 export type ApiStudentCourse = Pick<ApiCourse, 'id' | 'courseCode' | 'courseName'> & { lateFeePerDay: number }
-export type ApiStudentSummary = { id: number; registrationNumber: string; enrolmentNumber: string | null; name: string; phoneNumber: string; whatsappNumber: string; email: string; fatherName: string; branch: string; courseId: number; academicYearId: number; admissionSemesterId: number; studyYear: number; status: string; isHosteller: boolean; duesOutstanding: number; course: ApiStudentCourse; academicYear: ApiAcademicYear; admissionSemester: ApiSemester; accounts: ApiFeeAccount[] }
+export type ApiStudentSummary = { id: number; registrationNumber: string; enrolmentNumber: string | null; name: string; phoneNumber: string; whatsappNumber: string; email: string; fatherName: string; branch: string; courseId: number; batchId: number; sessionId: number; admissionSemesterId: number; studyYear: number; status: string; isHosteller: boolean; duesOutstanding: number; course: ApiStudentCourse; batch: ApiBatch; session: ApiSession; admissionSemester: ApiSemester; accounts: ApiFeeAccount[] }
 export type ApiStudentImportRow = { rowNumber: number; valid: boolean; errors: Array<{ path: string; message: string }> | null; payload: Record<string, unknown> }
 export type ApiStudentImportBatch = { id: number; status: string; fileName: string; rows: ApiStudentImportRow[] }
 export type ApiLedgerEntry = { id: number; semesterId: number | null; bucket: 'DUES' | 'DEPOSIT'; entryType: string; direction: 'INCREASE' | 'DECREASE'; amount: number; component: string; effectiveDate: string }
-export type ApiFeeAccount = { id: number; product: 'ACADEMIC' | 'HOSTEL'; academicYearId: number; duesOutstanding: number; lines: ApiLedgerEntry[] }
+export type ApiFeeAccount = { id: number; product: 'ACADEMIC' | 'HOSTEL'; sessionId: number; duesOutstanding: number; lines: ApiLedgerEntry[] }
 export type ApiStudent = ApiStudentSummary
 export type ApiReceipt = {
   receiptNo: string
@@ -59,9 +65,15 @@ export const api = {
   dashboardSummary: () => request<ApiDashboardSummary>('/reports/dashboard'),
   courseCollections: () => request<ApiCourseCollectionSummary>('/reports/course-collections'),
   courses: () => request<ApiCourse[]>('/courses'),
-  academicYears: () => request<ApiAcademicYear[]>('/academic-years'),
+  batches: () => request<ApiBatch[]>('/batches'),
+  createBatch: (payload: { courseId: number; label: string; startDate: string; endDate: string }) => request<ApiBatch>('/batches', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }),
+  sessions: () => request<ApiSession[]>('/sessions'),
   semesters: () => request<ApiSemester[]>('/semesters'),
-  feeStructures: (academicYearId?: number) => request<ApiFeeStructure[]>(`/fee-structures${academicYearId ? `?academicYearId=${academicYearId}` : ''}`),
+  feeStructures: (sessionId?: number) => request<ApiFeeStructure[]>(`/fee-structures${sessionId ? `?sessionId=${sessionId}` : ''}`),
+  lateFeeDashboard: () => request<ApiLateFeeDashboard>('/fees/late-fees'),
+  waiveLateFee: (studentId: number, actedBy: string, reason: string) => request<ApiLedgerEntry>(`/fees/late-fees/students/${studentId}/waive`, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ actedBy, reason }),
+  }),
   hostelRates: () => request<ApiHostelRate[]>('/hostel-rates'),
   students: (query = '') => request<ApiStudentSummary[]>(`/students${query ? `?q=${encodeURIComponent(query)}` : ''}`),
   student: (id: number) => request<ApiStudent>(`/students/${id}`),
@@ -79,7 +91,7 @@ export const api = {
   }),
   updateCourse: (id: number, payload: Partial<{ courseCode: string; courseName: string; affiliation: 'AKTU' | 'LU'; lateFeePerDay: number; active: boolean }>) => request<ApiCourse>(`/courses/${id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }),
   deleteCourse: (id: number) => request<ApiCourse | { id: number; deleted: true }>(`/courses/${id}`, { method: 'DELETE' }),
-  createStudent: (payload: { registrationNumber: string; name: string; whatsappNumber: string; phoneNumber: string; email: string; fatherName: string; branch: string; courseId: number; academicYearId: number; semesterId: number; admissionType: 'DIRECT' | 'COUNSELLING'; isHosteller: boolean; studyYear: number }) => request<ApiStudentSummary>('/students', {
+  createStudent: (payload: { registrationNumber: string; name: string; whatsappNumber: string; phoneNumber: string; email: string; fatherName: string; branch: string; courseId: number; batchId: number; sessionId: number; semesterId: number; admissionType: 'DIRECT' | 'COUNSELLING'; isHosteller: boolean; studyYear: number }) => request<ApiStudentSummary>('/students', {
     method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload),
   }),
   updateStudent: (id: number, payload: Partial<{ name: string; phoneNumber: string; whatsappNumber: string; email: string; fatherName: string; branch: string; enrolmentNumber: string; isHosteller: boolean; studyYear: number; status: 'ACTIVE' | 'LEFT' | 'COMPLETED' }>) => request<ApiStudentSummary>(`/students/${id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }),
@@ -90,20 +102,20 @@ export const api = {
     return request<ApiStudentImportBatch>('/students/imports/preview', { method: 'POST', body: form })
   },
   commitStudentImport: (batchId: number) => request<{ batchId: number; status: string; students: ApiStudentSummary[] }>(`/students/imports/${batchId}/commit`, { method: 'POST' }),
-  createAcademicYear: (payload: { label: string; startDate: string; endDate: string }) => request<ApiAcademicYear>('/academic-years', {
+  createSession: (payload: { label: string; startDate: string; endDate: string }) => request<ApiSession>('/sessions', {
     method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload),
   }),
-  updateAcademicYear: (id: number, payload: Partial<{ label: string; startDate: string; endDate: string }>) => request<ApiAcademicYear>(`/academic-years/${id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }),
-  deleteAcademicYear: (id: number) => request<{ id: number; deleted: true }>(`/academic-years/${id}`, { method: 'DELETE' }),
-  createSemester: (payload: { academicYearId: number; name: string; dueDate: string; graceDays: number; fineEndDate?: string }) => request<ApiSemester>('/semesters', {
+  updateSession: (id: number, payload: Partial<{ label: string; startDate: string; endDate: string }>) => request<ApiSession>(`/sessions/${id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }),
+  deleteSession: (id: number) => request<{ id: number; deleted: true }>(`/sessions/${id}`, { method: 'DELETE' }),
+  createSemester: (payload: { sessionId: number; name: string; dueDate: string; graceDays: number; fineEndDate?: string }) => request<ApiSemester>('/semesters', {
     method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload),
   }),
   updateSemester: (id: number, payload: Partial<{ name: string; dueDate: string; graceDays: number; fineEndDate: string | null }>) => request<ApiSemester>(`/semesters/${id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }),
   deleteSemester: (id: number) => request<{ id: number; deleted: true }>(`/semesters/${id}`, { method: 'DELETE' }),
-  createFeeStructure: (payload: { courseId: number; academicYearId: number; semesterId: number; component: ApiFeeStructure['component']; studyYear: number; amount: number }) => request<ApiFeeStructure>('/fee-structures', {
+  createFeeStructure: (payload: { courseId: number; sessionId: number; semesterId: number; component: ApiFeeStructure['component']; studyYear: number; amount: number }) => request<ApiFeeStructure>('/fee-structures', {
     method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload),
   }),
-  updateFeeStructure: (id: number, payload: Partial<Pick<ApiFeeStructure, 'courseId' | 'academicYearId' | 'semesterId' | 'component' | 'studyYear' | 'amount'>>) => request<ApiFeeStructure>(`/fee-structures/${id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }),
+  updateFeeStructure: (id: number, payload: Partial<Pick<ApiFeeStructure, 'courseId' | 'sessionId' | 'semesterId' | 'component' | 'studyYear' | 'amount'>>) => request<ApiFeeStructure>(`/fee-structures/${id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }),
   deleteFeeStructure: (id: number) => request<{ id: number; deleted: true }>(`/fee-structures/${id}`, { method: 'DELETE' }),
 }
 

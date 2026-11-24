@@ -15,13 +15,13 @@ On the deployment today, `GET /api/students` and `GET /api/students?q=REG` retur
 ```bash
 curl -X POST https://fee-management-icmrt.vercel.app/api/students \
   -H "Content-Type: application/json" \
-  -d '{"registrationNumber":"REG-ONTIME","name":"Asha Rao","whatsappNumber":"9876543210","phoneNumber":"9123456780","email":"asha@example.com","fatherName":"Asha Rao Father","branch":"Management","courseId":1,"academicYearId":1,"semesterId":1,"admissionType":"DIRECT"}'
+  -d '{"registrationNumber":"REG-ONTIME","name":"Asha Rao","whatsappNumber":"9876543210","phoneNumber":"9123456780","email":"asha@example.com","fatherName":"Asha Rao Father","branch":"Management","courseId":1,"sessionId":1,"semesterId":1,"admissionType":"DIRECT"}'
 ```
 
 Status: `201`
 
 ```json
-{"success":true,"data":{"id":1,"registrationNumber":"REG-ONTIME","enrolmentNumber":null,"name":"Asha Rao","whatsappNumber":"9876543210","phoneNumber":"9123456780","email":"asha@example.com","fatherName":"Asha Rao Father","branch":"Management","courseId":1,"academicYearId":1,"admissionSemesterId":1,"admissionType":"DIRECT","isHosteller":false,"studyYear":1,"status":"ACTIVE","leftOn":null,"course":{"id":1,"courseCode":"AKTU01","courseName":"MBA (AKTU) Updated","lateFeePerDay":15},"accounts":[{"id":1,"studentId":1,"product":"ACADEMIC","academicYearId":1,"duesOutstanding":10000,"depositHeld":0,"depositOutstanding":1000,"lines":[{"id":1,"feeAccountId":1,"semesterId":1,"bucket":"DUES","entryType":"ASSESSMENT","direction":"INCREASE","amount":10000,"component":"ACADEMIC_FEE","effectiveDate":"2026-11-11T00:00:00.000Z","actedBy":"system","reason":"Fee assessment","relatedEntryId":null,"paymentAttemptId":null},{"id":2,"feeAccountId":1,"semesterId":1,"bucket":"DEPOSIT","entryType":"ASSESSMENT","direction":"INCREASE","amount":1000,"component":"ACADEMIC_CAUTION","effectiveDate":"2026-11-11T00:00:00.000Z","actedBy":"system","reason":"Fee assessment","relatedEntryId":null,"paymentAttemptId":null}]}]}}
+{"success":true,"data":{"id":1,"registrationNumber":"REG-ONTIME","enrolmentNumber":null,"name":"Asha Rao","whatsappNumber":"9876543210","phoneNumber":"9123456780","email":"asha@example.com","fatherName":"Asha Rao Father","branch":"Management","courseId":1,"sessionId":1,"admissionSemesterId":1,"admissionType":"DIRECT","isHosteller":false,"studyYear":1,"status":"ACTIVE","leftOn":null,"course":{"id":1,"courseCode":"AKTU01","courseName":"MBA (AKTU) Updated","lateFeePerDay":15},"accounts":[{"id":1,"studentId":1,"product":"ACADEMIC","sessionId":1,"duesOutstanding":10000,"depositHeld":0,"depositOutstanding":1000,"lines":[{"id":1,"feeAccountId":1,"semesterId":1,"bucket":"DUES","entryType":"ASSESSMENT","direction":"INCREASE","amount":10000,"component":"ACADEMIC_FEE","effectiveDate":"2026-11-11T00:00:00.000Z","actedBy":"system","reason":"Fee assessment","relatedEntryId":null,"paymentAttemptId":null},{"id":2,"feeAccountId":1,"semesterId":1,"bucket":"DEPOSIT","entryType":"ASSESSMENT","direction":"INCREASE","amount":1000,"component":"ACADEMIC_CAUTION","effectiveDate":"2026-11-11T00:00:00.000Z","actedBy":"system","reason":"Fee assessment","relatedEntryId":null,"paymentAttemptId":null}]}]}}
 ```
 
 ### Search by registration number
@@ -49,7 +49,7 @@ curl -X GET https://fee-management-icmrt.vercel.app/api/students/1
 Status: `200`
 
 ```json
-{"success":true,"data":{"id":1,"registrationNumber":"REG-ONTIME","enrolmentNumber":null,"name":"Asha Rao","whatsappNumber":"9876543210","phoneNumber":"9123456780","email":"asha@example.com","fatherName":"Asha Rao Father","branch":"Management","courseId":1,"academicYearId":1,"admissionSemesterId":1,"admissionType":"DIRECT","isHosteller":false,"studyYear":1,"status":"ACTIVE","leftOn":null,"course":{"id":1,"courseCode":"AKTU01","courseName":"MBA (AKTU) Updated","lateFeePerDay":15},"accounts":[{"id":1,"studentId":1,"product":"ACADEMIC","academicYearId":1,"duesOutstanding":10000,"depositHeld":0,"depositOutstanding":1000,"lines":[{"id":1,"feeAccountId":1,"semesterId":1,"bucket":"DUES","entryType":"ASSESSMENT","direction":"INCREASE","amount":10000,"component":"ACADEMIC_FEE","effectiveDate":"2026-11-11T00:00:00.000Z","actedBy":"system","reason":"Fee assessment","relatedEntryId":null,"paymentAttemptId":null},{"id":2,"feeAccountId":1,"semesterId":1,"bucket":"DEPOSIT","entryType":"ASSESSMENT","direction":"INCREASE","amount":1000,"component":"ACADEMIC_CAUTION","effectiveDate":"2026-11-11T00:00:00.000Z","actedBy":"system","reason":"Fee assessment","relatedEntryId":null,"paymentAttemptId":null}]}]}}
+{"success":true,"data":{"id":1,"registrationNumber":"REG-ONTIME","enrolmentNumber":null,"name":"Asha Rao","whatsappNumber":"9876543210","phoneNumber":"9123456780","email":"asha@example.com","fatherName":"Asha Rao Father","branch":"Management","courseId":1,"sessionId":1,"admissionSemesterId":1,"admissionType":"DIRECT","isHosteller":false,"studyYear":1,"status":"ACTIVE","leftOn":null,"course":{"id":1,"courseCode":"AKTU01","courseName":"MBA (AKTU) Updated","lateFeePerDay":15},"accounts":[{"id":1,"studentId":1,"product":"ACADEMIC","sessionId":1,"duesOutstanding":10000,"depositHeld":0,"depositOutstanding":1000,"lines":[{"id":1,"feeAccountId":1,"semesterId":1,"bucket":"DUES","entryType":"ASSESSMENT","direction":"INCREASE","amount":10000,"component":"ACADEMIC_FEE","effectiveDate":"2026-11-11T00:00:00.000Z","actedBy":"system","reason":"Fee assessment","relatedEntryId":null,"paymentAttemptId":null},{"id":2,"feeAccountId":1,"semesterId":1,"bucket":"DEPOSIT","entryType":"ASSESSMENT","direction":"INCREASE","amount":1000,"component":"ACADEMIC_CAUTION","effectiveDate":"2026-11-11T00:00:00.000Z","actedBy":"system","reason":"Fee assessment","relatedEntryId":null,"paymentAttemptId":null}]}]}}
 ```
 
 ### Add enrolment number to the same student
@@ -65,7 +65,7 @@ curl -X PATCH https://fee-management-icmrt.vercel.app/api/students/1 \
 Status: `200`
 
 ```json
-{"success":true,"data":{"id":1,"registrationNumber":"REG-ONTIME","enrolmentNumber":"ENR1001","name":"Asha Rao","whatsappNumber":"9876543210","phoneNumber":"9123456780","email":"asha@example.com","fatherName":"Asha Rao Father","branch":"Management","courseId":1,"academicYearId":1,"admissionSemesterId":1,"admissionType":"DIRECT","isHosteller":false,"studyYear":1,"status":"ACTIVE","leftOn":null,"course":{"id":1,"courseCode":"AKTU01","courseName":"MBA (AKTU) Updated","lateFeePerDay":15},"accounts":[{"id":1,"studentId":1,"product":"ACADEMIC","academicYearId":1,"duesOutstanding":10000,"depositHeld":0,"depositOutstanding":1000,"lines":[{"id":1,"feeAccountId":1,"semesterId":1,"bucket":"DUES","entryType":"ASSESSMENT","direction":"INCREASE","amount":10000,"component":"ACADEMIC_FEE","effectiveDate":"2026-11-11T00:00:00.000Z","actedBy":"system","reason":"Fee assessment","relatedEntryId":null,"paymentAttemptId":null},{"id":2,"feeAccountId":1,"semesterId":1,"bucket":"DEPOSIT","entryType":"ASSESSMENT","direction":"INCREASE","amount":1000,"component":"ACADEMIC_CAUTION","effectiveDate":"2026-11-11T00:00:00.000Z","actedBy":"system","reason":"Fee assessment","relatedEntryId":null,"paymentAttemptId":null}]}]}}
+{"success":true,"data":{"id":1,"registrationNumber":"REG-ONTIME","enrolmentNumber":"ENR1001","name":"Asha Rao","whatsappNumber":"9876543210","phoneNumber":"9123456780","email":"asha@example.com","fatherName":"Asha Rao Father","branch":"Management","courseId":1,"sessionId":1,"admissionSemesterId":1,"admissionType":"DIRECT","isHosteller":false,"studyYear":1,"status":"ACTIVE","leftOn":null,"course":{"id":1,"courseCode":"AKTU01","courseName":"MBA (AKTU) Updated","lateFeePerDay":15},"accounts":[{"id":1,"studentId":1,"product":"ACADEMIC","sessionId":1,"duesOutstanding":10000,"depositHeld":0,"depositOutstanding":1000,"lines":[{"id":1,"feeAccountId":1,"semesterId":1,"bucket":"DUES","entryType":"ASSESSMENT","direction":"INCREASE","amount":10000,"component":"ACADEMIC_FEE","effectiveDate":"2026-11-11T00:00:00.000Z","actedBy":"system","reason":"Fee assessment","relatedEntryId":null,"paymentAttemptId":null},{"id":2,"feeAccountId":1,"semesterId":1,"bucket":"DEPOSIT","entryType":"ASSESSMENT","direction":"INCREASE","amount":1000,"component":"ACADEMIC_CAUTION","effectiveDate":"2026-11-11T00:00:00.000Z","actedBy":"system","reason":"Fee assessment","relatedEntryId":null,"paymentAttemptId":null}]}]}}
 ```
 
 ### Create a day scholar who later joins the hostel
@@ -75,13 +75,13 @@ Status: `200`
 ```bash
 curl -X POST https://fee-management-icmrt.vercel.app/api/students \
   -H "Content-Type: application/json" \
-  -d '{"registrationNumber":"REG-HOST","name":"Charu Das","whatsappNumber":"9876543210","phoneNumber":"9123456780","email":"charu@example.com","fatherName":"Charu Das Father","branch":"Management","courseId":1,"academicYearId":1,"semesterId":1,"admissionType":"DIRECT"}'
+  -d '{"registrationNumber":"REG-HOST","name":"Charu Das","whatsappNumber":"9876543210","phoneNumber":"9123456780","email":"charu@example.com","fatherName":"Charu Das Father","branch":"Management","courseId":1,"sessionId":1,"semesterId":1,"admissionType":"DIRECT"}'
 ```
 
 Status: `201`
 
 ```json
-{"success":true,"data":{"id":3,"registrationNumber":"REG-HOST","enrolmentNumber":null,"name":"Charu Das","whatsappNumber":"9876543210","phoneNumber":"9123456780","email":"charu@example.com","fatherName":"Charu Das Father","branch":"Management","courseId":1,"academicYearId":1,"admissionSemesterId":1,"admissionType":"DIRECT","isHosteller":false,"studyYear":1,"status":"ACTIVE","leftOn":null,"course":{"id":1,"courseCode":"AKTU01","courseName":"MBA (AKTU) Updated","lateFeePerDay":15},"accounts":[{"id":3,"studentId":3,"product":"ACADEMIC","academicYearId":1,"duesOutstanding":10000,"depositHeld":0,"depositOutstanding":1000,"lines":[{"id":5,"feeAccountId":3,"semesterId":1,"bucket":"DUES","entryType":"ASSESSMENT","direction":"INCREASE","amount":10000,"component":"ACADEMIC_FEE","effectiveDate":"2026-11-11T00:00:00.000Z","actedBy":"system","reason":"Fee assessment","relatedEntryId":null,"paymentAttemptId":null},{"id":6,"feeAccountId":3,"semesterId":1,"bucket":"DEPOSIT","entryType":"ASSESSMENT","direction":"INCREASE","amount":1000,"component":"ACADEMIC_CAUTION","effectiveDate":"2026-11-11T00:00:00.000Z","actedBy":"system","reason":"Fee assessment","relatedEntryId":null,"paymentAttemptId":null}]}]}}
+{"success":true,"data":{"id":3,"registrationNumber":"REG-HOST","enrolmentNumber":null,"name":"Charu Das","whatsappNumber":"9876543210","phoneNumber":"9123456780","email":"charu@example.com","fatherName":"Charu Das Father","branch":"Management","courseId":1,"sessionId":1,"admissionSemesterId":1,"admissionType":"DIRECT","isHosteller":false,"studyYear":1,"status":"ACTIVE","leftOn":null,"course":{"id":1,"courseCode":"AKTU01","courseName":"MBA (AKTU) Updated","lateFeePerDay":15},"accounts":[{"id":3,"studentId":3,"product":"ACADEMIC","sessionId":1,"duesOutstanding":10000,"depositHeld":0,"depositOutstanding":1000,"lines":[{"id":5,"feeAccountId":3,"semesterId":1,"bucket":"DUES","entryType":"ASSESSMENT","direction":"INCREASE","amount":10000,"component":"ACADEMIC_FEE","effectiveDate":"2026-11-11T00:00:00.000Z","actedBy":"system","reason":"Fee assessment","relatedEntryId":null,"paymentAttemptId":null},{"id":6,"feeAccountId":3,"semesterId":1,"bucket":"DEPOSIT","entryType":"ASSESSMENT","direction":"INCREASE","amount":1000,"component":"ACADEMIC_CAUTION","effectiveDate":"2026-11-11T00:00:00.000Z","actedBy":"system","reason":"Fee assessment","relatedEntryId":null,"paymentAttemptId":null}]}]}}
 ```
 
 ### Mark the student as a hosteller and assess hostel fees
@@ -97,7 +97,7 @@ curl -X PATCH https://fee-management-icmrt.vercel.app/api/students/3 \
 Status: `200`
 
 ```json
-{"success":true,"data":{"id":3,"registrationNumber":"REG-HOST","enrolmentNumber":null,"name":"Charu Das","whatsappNumber":"9876543210","phoneNumber":"9123456780","email":"charu@example.com","fatherName":"Charu Das Father","branch":"Management","courseId":1,"academicYearId":1,"admissionSemesterId":1,"admissionType":"DIRECT","isHosteller":true,"studyYear":1,"status":"ACTIVE","leftOn":null,"course":{"id":1,"courseCode":"AKTU01","courseName":"MBA (AKTU) Updated","lateFeePerDay":15},"accounts":[{"id":3,"studentId":3,"product":"ACADEMIC","academicYearId":1,"duesOutstanding":10000,"depositHeld":0,"depositOutstanding":1000,"lines":[{"id":5,"feeAccountId":3,"semesterId":1,"bucket":"DUES","entryType":"ASSESSMENT","direction":"INCREASE","amount":10000,"component":"ACADEMIC_FEE","effectiveDate":"2026-11-11T00:00:00.000Z","actedBy":"system","reason":"Fee assessment","relatedEntryId":null,"paymentAttemptId":null},{"id":6,"feeAccountId":3,"semesterId":1,"bucket":"DEPOSIT","entryType":"ASSESSMENT","direction":"INCREASE","amount":1000,"component":"ACADEMIC_CAUTION","effectiveDate":"2026-11-11T00:00:00.000Z","actedBy":"system","reason":"Fee assessment","relatedEntryId":null,"paymentAttemptId":null}]},{"id":4,"studentId":3,"product":"HOSTEL","academicYearId":1,"duesOutstanding":8000,"depositHeld":0,"depositOutstanding":500,"lines":[{"id":7,"feeAccountId":4,"semesterId":1,"bucket":"DUES","entryType":"ASSESSMENT","direction":"INCREASE","amount":8000,"component":"HOSTEL_FEE","effectiveDate":"2026-11-11T00:00:00.000Z","actedBy":"system","reason":"Fee assessment","relatedEntryId":null,"paymentAttemptId":null},{"id":8,"feeAccountId":4,"semesterId":1,"bucket":"DEPOSIT","entryType":"ASSESSMENT","direction":"INCREASE","amount":500,"component":"HOSTEL_SECURITY","effectiveDate":"2026-11-11T00:00:00.000Z","actedBy":"system","reason":"Fee assessment","relatedEntryId":null,"paymentAttemptId":null}]}]}}
+{"success":true,"data":{"id":3,"registrationNumber":"REG-HOST","enrolmentNumber":null,"name":"Charu Das","whatsappNumber":"9876543210","phoneNumber":"9123456780","email":"charu@example.com","fatherName":"Charu Das Father","branch":"Management","courseId":1,"sessionId":1,"admissionSemesterId":1,"admissionType":"DIRECT","isHosteller":true,"studyYear":1,"status":"ACTIVE","leftOn":null,"course":{"id":1,"courseCode":"AKTU01","courseName":"MBA (AKTU) Updated","lateFeePerDay":15},"accounts":[{"id":3,"studentId":3,"product":"ACADEMIC","sessionId":1,"duesOutstanding":10000,"depositHeld":0,"depositOutstanding":1000,"lines":[{"id":5,"feeAccountId":3,"semesterId":1,"bucket":"DUES","entryType":"ASSESSMENT","direction":"INCREASE","amount":10000,"component":"ACADEMIC_FEE","effectiveDate":"2026-11-11T00:00:00.000Z","actedBy":"system","reason":"Fee assessment","relatedEntryId":null,"paymentAttemptId":null},{"id":6,"feeAccountId":3,"semesterId":1,"bucket":"DEPOSIT","entryType":"ASSESSMENT","direction":"INCREASE","amount":1000,"component":"ACADEMIC_CAUTION","effectiveDate":"2026-11-11T00:00:00.000Z","actedBy":"system","reason":"Fee assessment","relatedEntryId":null,"paymentAttemptId":null}]},{"id":4,"studentId":3,"product":"HOSTEL","sessionId":1,"duesOutstanding":8000,"depositHeld":0,"depositOutstanding":500,"lines":[{"id":7,"feeAccountId":4,"semesterId":1,"bucket":"DUES","entryType":"ASSESSMENT","direction":"INCREASE","amount":8000,"component":"HOSTEL_FEE","effectiveDate":"2026-11-11T00:00:00.000Z","actedBy":"system","reason":"Fee assessment","relatedEntryId":null,"paymentAttemptId":null},{"id":8,"feeAccountId":4,"semesterId":1,"bucket":"DEPOSIT","entryType":"ASSESSMENT","direction":"INCREASE","amount":500,"component":"HOSTEL_SECURITY","effectiveDate":"2026-11-11T00:00:00.000Z","actedBy":"system","reason":"Fee assessment","relatedEntryId":null,"paymentAttemptId":null}]}]}}
 ```
 
 ### Mark a student as left
@@ -107,13 +107,13 @@ Status: `200`
 ```bash
 curl -X POST https://fee-management-icmrt.vercel.app/api/students \
   -H "Content-Type: application/json" \
-  -d '{"registrationNumber":"REG-LEFT","name":"Deepa Nair","whatsappNumber":"9876543210","phoneNumber":"9123456780","email":"deepa@example.com","fatherName":"Deepa Nair Father","branch":"Management","courseId":1,"academicYearId":1,"semesterId":1,"admissionType":"DIRECT"}'
+  -d '{"registrationNumber":"REG-LEFT","name":"Deepa Nair","whatsappNumber":"9876543210","phoneNumber":"9123456780","email":"deepa@example.com","fatherName":"Deepa Nair Father","branch":"Management","courseId":1,"sessionId":1,"semesterId":1,"admissionType":"DIRECT"}'
 ```
 
 Status: `201`
 
 ```json
-{"success":true,"data":{"id":4,"registrationNumber":"REG-LEFT","enrolmentNumber":null,"name":"Deepa Nair","whatsappNumber":"9876543210","phoneNumber":"9123456780","email":"deepa@example.com","fatherName":"Deepa Nair Father","branch":"Management","courseId":1,"academicYearId":1,"admissionSemesterId":1,"admissionType":"DIRECT","isHosteller":false,"studyYear":1,"status":"ACTIVE","leftOn":null,"course":{"id":1,"courseCode":"AKTU01","courseName":"MBA (AKTU) Updated","lateFeePerDay":15},"accounts":[{"id":5,"studentId":4,"product":"ACADEMIC","academicYearId":1,"duesOutstanding":10000,"depositHeld":0,"depositOutstanding":1000,"lines":[{"id":9,"feeAccountId":5,"semesterId":1,"bucket":"DUES","entryType":"ASSESSMENT","direction":"INCREASE","amount":10000,"component":"ACADEMIC_FEE","effectiveDate":"2026-11-11T00:00:00.000Z","actedBy":"system","reason":"Fee assessment","relatedEntryId":null,"paymentAttemptId":null},{"id":10,"feeAccountId":5,"semesterId":1,"bucket":"DEPOSIT","entryType":"ASSESSMENT","direction":"INCREASE","amount":1000,"component":"ACADEMIC_CAUTION","effectiveDate":"2026-11-11T00:00:00.000Z","actedBy":"system","reason":"Fee assessment","relatedEntryId":null,"paymentAttemptId":null}]}]}}
+{"success":true,"data":{"id":4,"registrationNumber":"REG-LEFT","enrolmentNumber":null,"name":"Deepa Nair","whatsappNumber":"9876543210","phoneNumber":"9123456780","email":"deepa@example.com","fatherName":"Deepa Nair Father","branch":"Management","courseId":1,"sessionId":1,"admissionSemesterId":1,"admissionType":"DIRECT","isHosteller":false,"studyYear":1,"status":"ACTIVE","leftOn":null,"course":{"id":1,"courseCode":"AKTU01","courseName":"MBA (AKTU) Updated","lateFeePerDay":15},"accounts":[{"id":5,"studentId":4,"product":"ACADEMIC","sessionId":1,"duesOutstanding":10000,"depositHeld":0,"depositOutstanding":1000,"lines":[{"id":9,"feeAccountId":5,"semesterId":1,"bucket":"DUES","entryType":"ASSESSMENT","direction":"INCREASE","amount":10000,"component":"ACADEMIC_FEE","effectiveDate":"2026-11-11T00:00:00.000Z","actedBy":"system","reason":"Fee assessment","relatedEntryId":null,"paymentAttemptId":null},{"id":10,"feeAccountId":5,"semesterId":1,"bucket":"DEPOSIT","entryType":"ASSESSMENT","direction":"INCREASE","amount":1000,"component":"ACADEMIC_CAUTION","effectiveDate":"2026-11-11T00:00:00.000Z","actedBy":"system","reason":"Fee assessment","relatedEntryId":null,"paymentAttemptId":null}]}]}}
 ```
 
 ### Record the leaving date without moving money
@@ -129,7 +129,7 @@ curl -X PATCH https://fee-management-icmrt.vercel.app/api/students/4 \
 Status: `200`
 
 ```json
-{"success":true,"data":{"id":4,"registrationNumber":"REG-LEFT","enrolmentNumber":null,"name":"Deepa Nair","whatsappNumber":"9876543210","phoneNumber":"9123456780","email":"deepa@example.com","fatherName":"Deepa Nair Father","branch":"Management","courseId":1,"academicYearId":1,"admissionSemesterId":1,"admissionType":"DIRECT","isHosteller":false,"studyYear":1,"status":"LEFT","leftOn":"2026-12-01T00:00:00.000Z","course":{"id":1,"courseCode":"AKTU01","courseName":"MBA (AKTU) Updated","lateFeePerDay":15},"accounts":[{"id":5,"studentId":4,"product":"ACADEMIC","academicYearId":1,"duesOutstanding":10000,"depositHeld":0,"depositOutstanding":1000,"lines":[{"id":9,"feeAccountId":5,"semesterId":1,"bucket":"DUES","entryType":"ASSESSMENT","direction":"INCREASE","amount":10000,"component":"ACADEMIC_FEE","effectiveDate":"2026-11-11T00:00:00.000Z","actedBy":"system","reason":"Fee assessment","relatedEntryId":null,"paymentAttemptId":null},{"id":10,"feeAccountId":5,"semesterId":1,"bucket":"DEPOSIT","entryType":"ASSESSMENT","direction":"INCREASE","amount":1000,"component":"ACADEMIC_CAUTION","effectiveDate":"2026-11-11T00:00:00.000Z","actedBy":"system","reason":"Fee assessment","relatedEntryId":null,"paymentAttemptId":null}]}]}}
+{"success":true,"data":{"id":4,"registrationNumber":"REG-LEFT","enrolmentNumber":null,"name":"Deepa Nair","whatsappNumber":"9876543210","phoneNumber":"9123456780","email":"deepa@example.com","fatherName":"Deepa Nair Father","branch":"Management","courseId":1,"sessionId":1,"admissionSemesterId":1,"admissionType":"DIRECT","isHosteller":false,"studyYear":1,"status":"LEFT","leftOn":"2026-12-01T00:00:00.000Z","course":{"id":1,"courseCode":"AKTU01","courseName":"MBA (AKTU) Updated","lateFeePerDay":15},"accounts":[{"id":5,"studentId":4,"product":"ACADEMIC","sessionId":1,"duesOutstanding":10000,"depositHeld":0,"depositOutstanding":1000,"lines":[{"id":9,"feeAccountId":5,"semesterId":1,"bucket":"DUES","entryType":"ASSESSMENT","direction":"INCREASE","amount":10000,"component":"ACADEMIC_FEE","effectiveDate":"2026-11-11T00:00:00.000Z","actedBy":"system","reason":"Fee assessment","relatedEntryId":null,"paymentAttemptId":null},{"id":10,"feeAccountId":5,"semesterId":1,"bucket":"DEPOSIT","entryType":"ASSESSMENT","direction":"INCREASE","amount":1000,"component":"ACADEMIC_CAUTION","effectiveDate":"2026-11-11T00:00:00.000Z","actedBy":"system","reason":"Fee assessment","relatedEntryId":null,"paymentAttemptId":null}]}]}}
 ```
 
 ### Preview a valid student workbook
@@ -144,7 +144,7 @@ curl -X POST https://fee-management-icmrt.vercel.app/api/students/imports/previe
 Status: `200`
 
 ```json
-{"success":true,"data":{"id":1,"status":"PREVIEW","fileName":"students-valid.xlsx","rows":[{"rowNumber":2,"valid":true,"errors":null,"payload":{"name":"Farah Khan","email":"farah@example.com","branch":"Management","courseId":1,"studyYear":1,"courseCode":"AKTU01","fatherName":"Farah Khan Father","semesterId":1,"isHosteller":false,"phoneNumber":"9123456780","semesterName":"SEMESTER_1","admissionType":"DIRECT","academicYearId":1,"whatsappNumber":"9876543210","academicYearLabel":"2026-27","registrationNumber":"REG-XLS"}}]}}
+{"success":true,"data":{"id":1,"status":"PREVIEW","fileName":"students-valid.xlsx","rows":[{"rowNumber":2,"valid":true,"errors":null,"payload":{"name":"Farah Khan","email":"farah@example.com","branch":"Management","courseId":1,"studyYear":1,"courseCode":"AKTU01","fatherName":"Farah Khan Father","semesterId":1,"isHosteller":false,"phoneNumber":"9123456780","semesterName":"SEMESTER_1","admissionType":"DIRECT","sessionId":1,"whatsappNumber":"9876543210","sessionLabel":"2026-27","registrationNumber":"REG-XLS"}}]}}
 ```
 
 ### Commit the valid preview
@@ -158,7 +158,7 @@ curl -X POST https://fee-management-icmrt.vercel.app/api/students/imports/1/comm
 Status: `201`
 
 ```json
-{"success":true,"data":{"batchId":1,"status":"COMMITTED","students":[{"id":7,"registrationNumber":"REG-XLS","enrolmentNumber":null,"name":"Farah Khan","whatsappNumber":"9876543210","phoneNumber":"9123456780","email":"farah@example.com","fatherName":"Farah Khan Father","branch":"Management","courseId":1,"academicYearId":1,"admissionSemesterId":1,"admissionType":"DIRECT","isHosteller":false,"studyYear":1,"status":"ACTIVE","leftOn":null,"course":{"id":1,"courseCode":"AKTU01","courseName":"MBA (AKTU) Updated","lateFeePerDay":15},"accounts":[{"id":7,"studentId":7,"product":"ACADEMIC","academicYearId":1,"duesOutstanding":10000,"depositHeld":0,"depositOutstanding":1000,"lines":[{"id":26,"feeAccountId":7,"semesterId":1,"bucket":"DUES","entryType":"ASSESSMENT","direction":"INCREASE","amount":10000,"component":"ACADEMIC_FEE","effectiveDate":"2026-11-11T00:00:00.000Z","actedBy":"system","reason":"Fee assessment","relatedEntryId":null,"paymentAttemptId":null},{"id":27,"feeAccountId":7,"semesterId":1,"bucket":"DEPOSIT","entryType":"ASSESSMENT","direction":"INCREASE","amount":1000,"component":"ACADEMIC_CAUTION","effectiveDate":"2026-11-11T00:00:00.000Z","actedBy":"system","reason":"Fee assessment","relatedEntryId":null,"paymentAttemptId":null}]}]}]}}
+{"success":true,"data":{"batchId":1,"status":"COMMITTED","students":[{"id":7,"registrationNumber":"REG-XLS","enrolmentNumber":null,"name":"Farah Khan","whatsappNumber":"9876543210","phoneNumber":"9123456780","email":"farah@example.com","fatherName":"Farah Khan Father","branch":"Management","courseId":1,"sessionId":1,"admissionSemesterId":1,"admissionType":"DIRECT","isHosteller":false,"studyYear":1,"status":"ACTIVE","leftOn":null,"course":{"id":1,"courseCode":"AKTU01","courseName":"MBA (AKTU) Updated","lateFeePerDay":15},"accounts":[{"id":7,"studentId":7,"product":"ACADEMIC","sessionId":1,"duesOutstanding":10000,"depositHeld":0,"depositOutstanding":1000,"lines":[{"id":26,"feeAccountId":7,"semesterId":1,"bucket":"DUES","entryType":"ASSESSMENT","direction":"INCREASE","amount":10000,"component":"ACADEMIC_FEE","effectiveDate":"2026-11-11T00:00:00.000Z","actedBy":"system","reason":"Fee assessment","relatedEntryId":null,"paymentAttemptId":null},{"id":27,"feeAccountId":7,"semesterId":1,"bucket":"DEPOSIT","entryType":"ASSESSMENT","direction":"INCREASE","amount":1000,"component":"ACADEMIC_CAUTION","effectiveDate":"2026-11-11T00:00:00.000Z","actedBy":"system","reason":"Fee assessment","relatedEntryId":null,"paymentAttemptId":null}]}]}]}}
 ```
 
 ## Wrong entry
@@ -170,7 +170,7 @@ Status: `201`
 ```bash
 curl -X POST https://fee-management-icmrt.vercel.app/api/students \
   -H "Content-Type: application/json" \
-  -d '{"name":"Missing Reg","whatsappNumber":"9876543210","phoneNumber":"9123456780","email":"missing@example.com","fatherName":"Father","branch":"Management","courseId":1,"academicYearId":1,"semesterId":1,"admissionType":"DIRECT"}'
+  -d '{"name":"Missing Reg","whatsappNumber":"9876543210","phoneNumber":"9123456780","email":"missing@example.com","fatherName":"Father","branch":"Management","courseId":1,"sessionId":1,"semesterId":1,"admissionType":"DIRECT"}'
 ```
 
 Status: `400`
@@ -186,7 +186,7 @@ Status: `400`
 ```bash
 curl -X POST https://fee-management-icmrt.vercel.app/api/students \
   -H "Content-Type: application/json" \
-  -d '{"registrationNumber":"REG-BADTYPE","name":"Bad Type","whatsappNumber":"9876543210","phoneNumber":"9123456780","email":"badtype@example.com","fatherName":"Bad Type Father","branch":"Management","courseId":1,"academicYearId":1,"semesterId":1,"admissionType":"LATERAL"}'
+  -d '{"registrationNumber":"REG-BADTYPE","name":"Bad Type","whatsappNumber":"9876543210","phoneNumber":"9123456780","email":"badtype@example.com","fatherName":"Bad Type Father","branch":"Management","courseId":1,"sessionId":1,"semesterId":1,"admissionType":"LATERAL"}'
 ```
 
 Status: `400`
@@ -202,7 +202,7 @@ Status: `400`
 ```bash
 curl -X POST https://fee-management-icmrt.vercel.app/api/students \
   -H "Content-Type: application/json" \
-  -d '{"registrationNumber":"REG-NOCOURSE","name":"No Course","whatsappNumber":"9876543210","phoneNumber":"9123456780","email":"nocourse@example.com","fatherName":"No Course Father","branch":"Management","courseId":999999,"academicYearId":1,"semesterId":1,"admissionType":"DIRECT"}'
+  -d '{"registrationNumber":"REG-NOCOURSE","name":"No Course","whatsappNumber":"9876543210","phoneNumber":"9123456780","email":"nocourse@example.com","fatherName":"No Course Father","branch":"Management","courseId":999999,"sessionId":1,"semesterId":1,"admissionType":"DIRECT"}'
 ```
 
 Status: `404`
@@ -218,7 +218,7 @@ Status: `404`
 ```bash
 curl -X POST https://fee-management-icmrt.vercel.app/api/students \
   -H "Content-Type: application/json" \
-  -d '{"registrationNumber":"REG-ONTIME","name":"Asha Copy","whatsappNumber":"9876543210","phoneNumber":"9123456780","email":"asha.copy@example.com","fatherName":"Asha Copy Father","branch":"Management","courseId":1,"academicYearId":1,"semesterId":1,"admissionType":"DIRECT"}'
+  -d '{"registrationNumber":"REG-ONTIME","name":"Asha Copy","whatsappNumber":"9876543210","phoneNumber":"9123456780","email":"asha.copy@example.com","fatherName":"Asha Copy Father","branch":"Management","courseId":1,"sessionId":1,"semesterId":1,"admissionType":"DIRECT"}'
 ```
 
 Status: `409`
@@ -239,7 +239,7 @@ curl -X POST https://fee-management-icmrt.vercel.app/api/students/imports/previe
 Status: `200`
 
 ```json
-{"success":true,"data":{"id":2,"status":"PREVIEW","fileName":"students-bad.xlsx","rows":[{"rowNumber":2,"valid":false,"errors":[{"path":"registrationNumber","message":"registrationNumber is required"}],"payload":{"name":"No Reg","email":"noreg@example.com","branch":"Management","studyYear":1,"courseCode":"AKTU01","fatherName":"Father","isHosteller":false,"phoneNumber":"9123456780","semesterName":"SEMESTER_1","admissionType":"DIRECT","whatsappNumber":"9876543210","academicYearLabel":"2026-27","registrationNumber":""}}]}}
+{"success":true,"data":{"id":2,"status":"PREVIEW","fileName":"students-bad.xlsx","rows":[{"rowNumber":2,"valid":false,"errors":[{"path":"registrationNumber","message":"registrationNumber is required"}],"payload":{"name":"No Reg","email":"noreg@example.com","branch":"Management","studyYear":1,"courseCode":"AKTU01","fatherName":"Father","isHosteller":false,"phoneNumber":"9123456780","semesterName":"SEMESTER_1","admissionType":"DIRECT","whatsappNumber":"9876543210","sessionLabel":"2026-27","registrationNumber":""}}]}}
 ```
 
 ### Preview a workbook row with a duplicate registration number
@@ -254,7 +254,7 @@ curl -X POST https://fee-management-icmrt.vercel.app/api/students/imports/previe
 Status: `200`
 
 ```json
-{"success":true,"data":{"id":3,"status":"PREVIEW","fileName":"students-duplicate.xlsx","rows":[{"rowNumber":2,"valid":false,"errors":[{"path":"registrationNumber","message":"duplicate registration number"}],"payload":{"name":"Asha Copy","email":"copy@example.com","branch":"Management","studyYear":1,"courseCode":"AKTU01","fatherName":"Asha Copy Father","isHosteller":false,"phoneNumber":"9123456780","semesterName":"SEMESTER_1","admissionType":"COUNSELLING","whatsappNumber":"9876543210","academicYearLabel":"2026-27","registrationNumber":"REG-ONTIME"}}]}}
+{"success":true,"data":{"id":3,"status":"PREVIEW","fileName":"students-duplicate.xlsx","rows":[{"rowNumber":2,"valid":false,"errors":[{"path":"registrationNumber","message":"duplicate registration number"}],"payload":{"name":"Asha Copy","email":"copy@example.com","branch":"Management","studyYear":1,"courseCode":"AKTU01","fatherName":"Asha Copy Father","isHosteller":false,"phoneNumber":"9123456780","semesterName":"SEMESTER_1","admissionType":"COUNSELLING","whatsappNumber":"9876543210","sessionLabel":"2026-27","registrationNumber":"REG-ONTIME"}}]}}
 ```
 
 ## Other failure

@@ -15,10 +15,11 @@ const IMPORT_HEADERS = [
   "fatherName",
   "branch",
   "courseCode",
+  "batchLabel",
   "admissionType",
   "isHosteller",
   "studyYear",
-  "academicYearLabel",
+  "sessionLabel",
   "semesterName",
 ];
 
@@ -45,7 +46,8 @@ function shapeStudent(student) {
 
 const studentInclude = {
   course: { select: { id: true, courseCode: true, courseName: true, lateFeePerDay: true } },
-  academicYear: true,
+  batch: true,
+  session: true,
   admissionSemester: true,
   feeAccounts: { include: { ledgerEntries: { orderBy: { id: "asc" } } } },
 };
@@ -61,23 +63,29 @@ async function loadStudent(id) {
   return shapeStudent(student);
 }
 
-async function assertYearAndSemester(academicYearId, semesterId) {
-  const year = await prisma.academicYear.findUnique({ where: { id: academicYearId } });
+async function assertSessionAndSemester(sessionId, semesterId) {
+  const year = await prisma.session.findUnique({ where: { id: sessionId } });
   if (!year) {
-    throw notFound("ACADEMIC_YEAR_NOT_FOUND");
+    throw notFound("SESSION_NOT_FOUND");
   }
   const semester = await prisma.semester.findUnique({ where: { id: semesterId } });
-  if (!semester || semester.academicYearId !== academicYearId) {
+  if (!semester || semester.sessionId !== sessionId) {
     throw notFound("SEMESTER_NOT_FOUND");
   }
+  return year;
 }
 
 async function createStudent(data) {
-  const course = await prisma.course.findUnique({ where: { id: data.courseId } });
-  if (!course) {
-    throw notFound("COURSE_NOT_FOUND");
+  const [course, batch] = await Promise.all([
+    prisma.course.findUnique({ where: { id: data.courseId } }),
+    prisma.batch.findUnique({ where: { id: data.batchId } }),
+  ]);
+  if (!course) throw notFound("COURSE_NOT_FOUND");
+  if (!batch || batch.courseId !== data.courseId) throw notFound("BATCH_NOT_FOUND");
+  const session = await assertSessionAndSemester(data.sessionId, data.semesterId);
+  if (session.startDate < batch.startDate || session.startDate > batch.endDate) {
+    throw badRequest("SESSION_OUTSIDE_BATCH", [{ path: "sessionId", message: "session must fall within the selected batch dates" }]);
   }
-  await assertYearAndSemester(data.academicYearId, data.semesterId);
   try {
     const created = await prisma.transaction(async (tx) => {
       const student = await tx.student.create({
@@ -90,7 +98,8 @@ async function createStudent(data) {
           fatherName: data.fatherName,
           branch: data.branch,
           courseId: data.courseId,
-          academicYearId: data.academicYearId,
+          batchId: data.batchId,
+          sessionId: data.sessionId,
           admissionSemesterId: data.semesterId,
           admissionType: data.admissionType,
           isHosteller: data.isHosteller ?? false,
@@ -304,21 +313,26 @@ async function previewImport(file) {
     }
     seen.set(value.registrationNumber, rowNumber);
 
-    const [course, year, existing] = await Promise.all([
+    const [course, session, existing] = await Promise.all([
       prisma.course.findUnique({ where: { courseCode: value.courseCode } }),
-      prisma.academicYear.findUnique({ where: { label: value.academicYearLabel } }),
+      prisma.session.findUnique({ where: { label: value.sessionLabel } }),
       prisma.student.findUnique({ where: { registrationNumber: value.registrationNumber } }),
     ]);
+    const batch = course ? await prisma.batch.findUnique({ where: { courseId_label: { courseId: course.id, label: value.batchLabel } } }) : null;
     if (!course || !course.active) {
       errors.push({ path: "courseCode", message: course ? "course is inactive" : "course not found" });
     }
-    if (!year) {
-      errors.push({ path: "academicYearLabel", message: "academic year not found" });
+    if (course && !batch) errors.push({ path: "batchLabel", message: "batch not found for course" });
+    if (!session) {
+      errors.push({ path: "sessionLabel", message: "session not found" });
+    }
+    if (batch && session && (session.startDate < batch.startDate || session.startDate > batch.endDate)) {
+      errors.push({ path: "sessionLabel", message: "session must fall within the selected batch dates" });
     }
     let semester = null;
-    if (year) {
+    if (session) {
       semester = await prisma.semester.findUnique({
-        where: { academicYearId_name: { academicYearId: year.id, name: value.semesterName } },
+        where: { sessionId_name: { sessionId: session.id, name: value.semesterName } },
       });
       if (!semester) {
         errors.push({ path: "semesterName", message: "semester not found" });
@@ -337,7 +351,8 @@ async function previewImport(file) {
           ? {
               ...value,
               courseId: course.id,
-              academicYearId: year.id,
+              batchId: batch.id,
+              sessionId: session.id,
               semesterId: semester.id,
             }
           : raw,
@@ -404,7 +419,8 @@ async function commitImport(batchId) {
           fatherName: data.fatherName,
           branch: data.branch,
           courseId: data.courseId,
-          academicYearId: data.academicYearId,
+          batchId: data.batchId,
+          sessionId: data.sessionId,
           admissionSemesterId: data.semesterId,
           admissionType: data.admissionType,
           isHosteller: data.isHosteller,

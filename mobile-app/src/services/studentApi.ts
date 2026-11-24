@@ -37,10 +37,10 @@ export async function requestStudentOtp(phoneNumber: string) {
 }
 
 export async function verifyStudentOtp(phoneNumber: string, otp: string) {
-  const result = await request<{ accessToken: string; student: { id: number; name: string; registrationNumber: string; phoneNumber: string; studyYear: number; course: { courseName: string }; academicYear: { label: string } } }>('/student-auth/verify-otp', undefined, { method: 'POST', body: JSON.stringify({ phoneNumber, otp }) })
+  const result = await request<{ accessToken: string; student: { id: number; name: string; registrationNumber: string; phoneNumber: string; studyYear: number; course: { courseName: string }; batch: { label: string } } }>('/student-auth/verify-otp', undefined, { method: 'POST', body: JSON.stringify({ phoneNumber, otp }) })
   return {
     accessToken: result.accessToken,
-    student: { id: result.student.id, name: result.student.name, registrationNo: result.student.registrationNumber, phone: result.student.phoneNumber, year: result.student.studyYear, course: result.student.course.courseName, batch: Number(result.student.academicYear.label) } as Student,
+    student: { id: result.student.id, name: result.student.name, registrationNo: result.student.registrationNumber, phone: result.student.phoneNumber, year: result.student.studyYear, course: result.student.course.courseName, batch: Number(result.student.batch.label.slice(0, 4)) } as Student,
   }
 }
 

@@ -156,13 +156,13 @@ export function OverviewDashboard({ onNotice, onFeeStructure }: OverviewDashboar
           <button className="fee-breakdown-link" onClick={onFeeStructure}><span>Fee collection by course</span><small>Collected across courses</small></button>
           <button className="more-button" aria-label="Refresh course collections" title="Refresh course collections" onClick={() => setCourseCollectionRefreshKey(key => key + 1)}>···</button>
         </div>
-        <div className="donut-area"><div className="donut" style={{ background: donutBackground }}><div><strong>{courseCollections ? compactCurrency(courseCollections.totalCollected) : '—'}</strong><span>Total collected</span></div></div></div>
+        <div className="donut-area"><div className="donut" style={{ background: donutBackground }}><div><strong>{courseCollections ? currency.format(courseCollections.totalCollected) : '—'}</strong><span>Total collected</span></div></div></div>
         <div className="breakdown-list">
           {courseCollections?.courses.map((course, index) => <div key={course.courseId}>
             <span className="category-dot" style={{ backgroundColor: courseColors[index % courseColors.length] }}/>
             <span className="category-name">{course.courseName}</span>
             <strong>{currency.format(course.amount)}</strong>
-            <small>{Math.round(course.sharePercent)}%</small>
+            <small>{Number(course.sharePercent.toFixed(2)).toLocaleString('en-IN')}%</small>
           </div>)}
           {!courseCollections && !courseCollectionError && <p className="course-collection-message">Loading course collections…</p>}
           {courseCollectionError && <p className="course-collection-message" role="alert">{courseCollectionError}</p>}

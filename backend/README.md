@@ -36,7 +36,7 @@ The public `POST /api/auth/login` endpoint checks password hashes stored in the
 
 Both demo accounts use the password `12345678`. Teacher accounts can use the
 student, fee, payment, and reminder workflows. Student creation and setup pages
-for courses, academic years, semesters, and fee structures are Super Admin only.
+for courses, batches, sessions, semesters, and fee structures are Super Admin only.
 Set `AUTH_TOKEN_SECRET` in `.env` to a long random value.
 
 ## Student OTP login

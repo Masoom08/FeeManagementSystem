@@ -8,10 +8,10 @@ function productFor(component) {
 
 async function ensureAccount(tx, student, product) {
   const where = {
-    studentId_product_academicYearId: {
+    studentId_product_sessionId: {
       studentId: student.id,
       product,
-      academicYearId: student.academicYearId,
+      sessionId: student.sessionId,
     },
   };
   const existing = await tx.feeAccount.findUnique({ where });
@@ -22,7 +22,7 @@ async function ensureAccount(tx, student, product) {
     data: {
       studentId: student.id,
       product,
-      academicYearId: student.academicYearId,
+      sessionId: student.sessionId,
     },
   });
 }
@@ -31,7 +31,7 @@ async function assessStudent(tx, student, products) {
   const structures = await tx.feeStructure.findMany({
     where: {
       courseId: student.courseId,
-      academicYearId: student.academicYearId,
+      sessionId: student.sessionId,
       semesterId: student.admissionSemesterId,
       studyYear: student.studyYear,
     },

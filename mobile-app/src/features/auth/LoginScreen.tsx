@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Alert, Image, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native'
+import { Alert, Image, KeyboardAvoidingView, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native'
 import { PrimaryButton } from '../../components/PrimaryButton'
 import { colors } from '../../theme/colors'
 import { requestStudentOtp, verifyStudentOtp } from '../../services/studentApi'
@@ -42,7 +42,7 @@ export function LoginScreen({ onAuthenticated }: LoginScreenProps) {
 
   return (
     <>
-    <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+    <KeyboardAvoidingView style={styles.flex} behavior="padding">
       <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
         <View style={styles.brandRow}>
           <Image source={require('../../../assets/logo-iccmrt.png')} accessibilityLabel="ICCMRT logo" resizeMode="contain" style={styles.logo}/>

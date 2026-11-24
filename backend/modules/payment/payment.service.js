@@ -225,7 +225,7 @@ async function getReceipt(paymentId) {
               student: {
                 include: {
                   course: true,
-                  academicYear: true,
+                  batch: true,
                   admissionSemester: { select: { name: true } },
                 },
               },
@@ -271,7 +271,7 @@ async function getReceipt(paymentId) {
           phoneNumber: student.phoneNumber,
           courseName: student.course.courseName,
           affiliation: student.course.affiliation,
-          batch: student.academicYear.label,
+          batch: student.batch.label,
         },
       };
     }),
@@ -291,14 +291,14 @@ async function listPaymentHistory() {
               student: {
                 include: {
                   course: true,
-                  academicYear: true,
+                  batch: true,
                 },
               },
             },
           },
         },
       },
-      ledgerEntries: { include: { semester: { include: { academicYear: { select: { label: true } } } } } },
+      ledgerEntries: { include: { semester: { include: { session: { select: { label: true } } } } } },
     },
   });
   return payments.flatMap((payment) => payment.allocations.flatMap((allocation) => {
@@ -310,14 +310,14 @@ async function listPaymentHistory() {
       const key = entry.semesterId;
       const period = grouped.get(key) || {
         name: entry.semester.name,
-        academicYear: entry.semester.academicYear.label,
+        session: entry.semester.session.label,
         amount: 0,
       };
       period.amount += entry.amount;
       grouped.set(key, period);
       return grouped;
     }, new Map()).values()];
-    const paymentRows = periods.length ? periods : [{ name: null, academicYear: null, amount: allocation.amount }];
+    const paymentRows = periods.length ? periods : [{ name: null, session: null, amount: allocation.amount }];
     return paymentRows.map((period) => ({
       paymentId: payment.id,
       receiptNo: payment.receiptNo,
@@ -327,14 +327,15 @@ async function listPaymentHistory() {
       bucket: allocation.bucket,
       product: allocation.feeAccount.product,
       semester: period.name,
-      semesterAcademicYear: period.academicYear,
+      semesterSession: period.session,
+      studyYear: period.name ? Math.ceil(Number(period.name.match(/\d+/)?.[0]) / 2) : student.studyYear,
       student: {
         id: student.id,
         name: student.name,
         registrationNumber: student.registrationNumber,
         courseId: student.courseId,
         courseName: student.course.courseName,
-        batch: student.academicYear.label,
+        batch: student.batch.label,
         studyYear: student.studyYear,
       },
     }));

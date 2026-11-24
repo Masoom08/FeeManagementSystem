@@ -11,11 +11,6 @@ const courseDefinitions = [
   { name: "BBA (AKTU)", code: "BAK", fee: 26000, affiliation: "AKTU", duration: 3 },
   { name: "MBA (AKTU)", code: "MBAAK", fee: 32000, affiliation: "AKTU", duration: 2 },
 ];
-const coursesByBatch = {
-  2026: ["BBA (LU)", "B.Com (Hons.)", "BBA (AKTU)", "MBA (AKTU)"],
-  2025: ["BBA (LU)", "B.Com (Hons.)", "BBA (AKTU)", "MBA (AKTU)"],
-  2024: ["BBA (LU)", "B.Com (Hons.)", "BBA (AKTU)", "MBA (AKTU)"],
-};
 const studentDefinitions = [
   { registrationNumber: "ICM2026BAK01", name: "Masoom Singh", phoneNumber: "9454716083", batch: 2026, courseName: "BBA (AKTU)", studyYear: 1, semesterNumber: 1, paid: true },
   { registrationNumber: "ICM2026BAK02", name: "Demo Student 2", phoneNumber: "9454716084", batch: 2026, courseName: "BBA (AKTU)", studyYear: 1, semesterNumber: 1, paid: false },
@@ -48,15 +43,15 @@ function date(value) {
   return new Date(`${value}T00:00:00.000Z`);
 }
 
-function semesterDueDate(batch, semesterNumber) {
-  const month = semesterNumber % 2 === 1 ? 6 : 1;
-  const year = batch + Math.floor((semesterNumber - 1) / 2) + (semesterNumber % 2 === 0 ? 1 : 0);
+function semesterDueDate(sessionYear, semesterNumber) {
+  const month = semesterNumber % 2 === 1 ? 9 : 2;
+  const year = sessionYear + (semesterNumber % 2 === 1 ? 0 : 1);
   return date(`${year}-${String(month).padStart(2, "0")}-10`);
 }
 
-function paymentDate(batch, semesterNumber, index) {
-  const month = semesterNumber % 2 === 1 ? 6 : 1;
-  const year = batch + Math.floor((semesterNumber - 1) / 2) + (semesterNumber % 2 === 0 ? 1 : 0);
+function paymentDate(sessionYear, semesterNumber, index) {
+  const month = semesterNumber % 2 === 1 ? 9 : 2;
+  const year = sessionYear + (semesterNumber % 2 === 1 ? 0 : 1);
   const day = ((index * 3 + semesterNumber * 2) % 10) + 1;
   return date(`${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`);
 }
@@ -76,68 +71,91 @@ async function seedCourses() {
 
   const result = new Map();
   for (const definition of courseDefinitions) {
+    const lateFeePerDay = definition.name.startsWith("MBA") ? 10 : 5;
     const course = await prisma.course.upsert({
       where: { courseCode: definition.code },
-      update: { courseName: definition.name, affiliation: definition.affiliation },
+      update: { courseName: definition.name, affiliation: definition.affiliation, lateFeePerDay },
       create: {
         courseCode: definition.code,
         courseName: definition.name,
         affiliation: definition.affiliation,
-        lateFeePerDay: 0,
+        lateFeePerDay,
       },
     });
+    const isMba = definition.name.startsWith("MBA");
+    for (const [semesterType, month] of [["ODD", isMba ? 5 : 6], ["EVEN", isMba ? 11 : 1]]) {
+      await prisma.$executeRaw`INSERT INTO course_fee_deadlines (course_id, semester_type, month, day)
+        VALUES (${course.id}, ${semesterType}, ${month}, 10)
+        ON DUPLICATE KEY UPDATE month = VALUES(month), day = VALUES(day)`;
+    }
     result.set(definition.name, { ...definition, id: course.id });
   }
   return result;
 }
 
-async function seedAcademicYears() {
+async function seedSessions() {
   const result = new Map();
-  for (const batch of [2024, 2025, 2026]) {
-    const year = await prisma.academicYear.upsert({
-      where: { label: String(batch) },
-      update: { startDate: date(`${batch}-08-01`), endDate: date(`${batch + 3}-07-31`) },
+  for (const sessionYear of [2024, 2025, 2026, 2027, 2028]) {
+    const label = `${sessionYear}-${String(sessionYear + 1).slice(-2)}`;
+    const session = await prisma.session.upsert({
+      where: { label },
+      update: { startDate: date(`${sessionYear}-08-01`), endDate: date(`${sessionYear + 1}-07-31`) },
       create: {
-        label: String(batch),
-        startDate: date(`${batch}-08-01`),
-        endDate: date(`${batch + 3}-07-31`),
+        label,
+        startDate: date(`${sessionYear}-08-01`),
+        endDate: date(`${sessionYear + 1}-07-31`),
       },
     });
-    result.set(batch, year);
+    result.set(sessionYear, session);
   }
   return result;
 }
 
-async function seedSemesters(years) {
+async function seedBatches(courses) {
   const result = new Map();
-  for (const [batch, year] of years) {
+  for (const startYear of [2024, 2025, 2026]) {
+    for (const course of courses.values()) {
+      const endYear = startYear + course.duration;
+      const label = `${startYear}-${String(endYear).slice(-2)}`;
+      const batch = await prisma.batch.upsert({
+        where: { courseId_label: { courseId: course.id, label } },
+        update: { startDate: date(`${startYear}-08-01`), endDate: date(`${endYear}-07-31`) },
+        create: { courseId: course.id, label, startDate: date(`${startYear}-08-01`), endDate: date(`${endYear}-07-31`) },
+      });
+      result.set(`${course.id}:${startYear}`, batch);
+    }
+  }
+  return result;
+}
+
+async function seedSemesters(sessions) {
+  const result = new Map();
+  for (const [sessionYear, session] of sessions) {
     const rows = [];
     for (let number = 1; number <= 6; number += 1) {
-      const dueDate = semesterDueDate(batch, number);
+      const dueDate = semesterDueDate(sessionYear, number);
       rows.push(await prisma.semester.upsert({
-        where: { academicYearId_name: { academicYearId: year.id, name: `Semester ${number}` } },
+        where: { sessionId_name: { sessionId: session.id, name: `Semester ${number}` } },
         update: { dueDate, graceDays: 0 },
-        create: { academicYearId: year.id, name: `Semester ${number}`, dueDate, graceDays: 0 },
+        create: { sessionId: session.id, name: `Semester ${number}`, dueDate, graceDays: 0 },
       }));
     }
-    result.set(batch, rows);
+    result.set(sessionYear, rows);
   }
   return result;
 }
 
-async function seedStructures(courses, years, semesters) {
-  for (const [batch, courseNames] of Object.entries(coursesByBatch)) {
-    const cohort = Number(batch);
-    for (const name of courseNames) {
-      const course = courses.get(name);
+async function seedStructures(courses, sessions, semesters) {
+  for (const [sessionYear, session] of sessions) {
+    for (const course of courses.values()) {
       for (let semesterNumber = 1; semesterNumber <= course.duration * 2; semesterNumber += 1) {
         const studyYear = Math.floor((semesterNumber - 1) / 2) + 1;
-        const semester = semesters.get(cohort)[semesterNumber - 1];
+        const semester = semesters.get(sessionYear)[semesterNumber - 1];
         await prisma.feeStructure.upsert({
           where: {
-            courseId_academicYearId_semesterId_component_studyYear: {
+            courseId_sessionId_semesterId_component_studyYear: {
               courseId: course.id,
-              academicYearId: years.get(cohort).id,
+              sessionId: session.id,
               semesterId: semester.id,
               component: "ACADEMIC_FEE",
               studyYear,
@@ -146,7 +164,7 @@ async function seedStructures(courses, years, semesters) {
           update: { amount: course.fee },
           create: {
             courseId: course.id,
-            academicYearId: years.get(cohort).id,
+            sessionId: session.id,
             semesterId: semester.id,
             component: "ACADEMIC_FEE",
             studyYear,
@@ -181,7 +199,7 @@ async function seedUsers() {
   }
 }
 
-async function seedStudents(courses, years, semesters) {
+async function seedStudents(courses, batches, sessions, semesters) {
   const legacyStudents = await prisma.student.findMany({
     where: { registrationNumber: { in: legacySeedRegistrationNumbers } },
     select: { id: true },
@@ -213,8 +231,11 @@ async function seedStudents(courses, years, semesters) {
 
   for (const definition of studentDefinitions) {
     const { batch, courseName, semesterNumber } = definition;
-    const year = years.get(batch);
     const course = courses.get(courseName);
+    const batchRecord = batches.get(`${course.id}:${batch}`);
+    const currentSessionYear = batch + definition.studyYear - 1;
+    const currentSession = sessions.get(currentSessionYear);
+    const currentSemesterNumber = (definition.studyYear - 1) * 2 + 1;
     const student = await prisma.student.create({
       data: {
         registrationNumber: definition.registrationNumber,
@@ -226,20 +247,24 @@ async function seedStudents(courses, years, semesters) {
         fatherName: "Demo Parent",
         branch: course.name,
         courseId: course.id,
-        academicYearId: year.id,
-        admissionSemesterId: semesters.get(batch)[0].id,
+        batchId: batchRecord.id,
+        sessionId: currentSession.id,
+        admissionSemesterId: semesters.get(currentSessionYear)[currentSemesterNumber - 1].id,
         admissionType: "DIRECT",
         isHosteller: false,
         studyYear: definition.studyYear,
         status: "ACTIVE",
       },
     });
-    const account = await prisma.feeAccount.create({
-      data: { studentId: student.id, product: "ACADEMIC", academicYearId: year.id },
-    });
-
+    const accounts = new Map();
     for (let currentSemester = 1; currentSemester <= course.duration * 2; currentSemester += 1) {
-      const semester = semesters.get(batch)[currentSemester - 1];
+      const semesterSessionYear = batch + Math.floor((currentSemester - 1) / 2);
+      const semester = semesters.get(semesterSessionYear)[currentSemester - 1];
+      let account = accounts.get(semesterSessionYear);
+      if (!account) {
+        account = await prisma.feeAccount.create({ data: { studentId: student.id, product: "ACADEMIC", sessionId: sessions.get(semesterSessionYear).id } });
+        accounts.set(semesterSessionYear, account);
+      }
       await prisma.ledgerEntry.create({
         data: {
           feeAccountId: account.id,
@@ -249,7 +274,7 @@ async function seedStudents(courses, years, semesters) {
           direction: "INCREASE",
           amount: course.fee,
           component: "ACADEMIC_FEE",
-          effectiveDate: semesterDueDate(batch, currentSemester),
+          effectiveDate: semesterDueDate(semesterSessionYear, currentSemester),
           actedBy: seedActor,
           reason: "Demo semester fee",
         },
@@ -264,7 +289,7 @@ async function seedStudents(courses, years, semesters) {
             reference: `SEED-${definition.registrationNumber}-${currentSemester}`,
             receiptNo: `RCPT-${definition.registrationNumber}-${String(currentSemester).padStart(2, "0")}`,
             actedBy: seedActor,
-            paidOn: paymentDate(batch, currentSemester, 0),
+            paidOn: paymentDate(semesterSessionYear, currentSemester, 0),
             allocations: { create: [{ feeAccountId: account.id, bucket: "DUES", amount: course.fee }] },
           },
         });
@@ -277,7 +302,7 @@ async function seedStudents(courses, years, semesters) {
             direction: "DECREASE",
             amount: course.fee,
             component: "ACADEMIC_FEE",
-            effectiveDate: paymentDate(batch, currentSemester, 0),
+            effectiveDate: paymentDate(semesterSessionYear, currentSemester, 0),
             actedBy: seedActor,
             reason: "Demo semester payment",
             paymentAttemptId: attempt.id,
@@ -292,11 +317,12 @@ async function seedStudents(courses, years, semesters) {
 async function main() {
   await seedUsers();
   const courses = await seedCourses();
-  const years = await seedAcademicYears();
-  const semesters = await seedSemesters(years);
-  await seedStructures(courses, years, semesters);
+  const sessions = await seedSessions();
+  const batches = await seedBatches(courses);
+  const semesters = await seedSemesters(sessions);
+  await seedStructures(courses, sessions, semesters);
   await seedHostelRates();
-  const studentCount = await seedStudents(courses, years, semesters);
+  const studentCount = await seedStudents(courses, batches, sessions, semesters);
   console.log(`Frontend demo seed complete: ${studentCount} students, ${hostelRates.length} hostel rates.`);
 }
 

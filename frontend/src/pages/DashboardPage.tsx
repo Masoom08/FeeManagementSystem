@@ -1,4 +1,4 @@
-﻿import { useState } from 'react'
+import { useState } from 'react'
 import { Icon, type IconName } from '../components/ui/AppIcon'
 import { LateFeeWaivers } from '../features/fees/components/LateFeeWaivers'
 import { OverviewDashboard } from '../features/dashboard/components/OverviewDashboard'
@@ -8,7 +8,7 @@ import { FeeHistoryPage } from '../features/payments/components/FeeHistoryPage'
 import { AdminManagementModal, AdminManagementPage, type ManagementFormSection, type ManagementListSection } from './AdminManagementPage'
 import iccmrtLogo from '../assets/logo-iccmrt.png'
 
-export type DashboardPageName = 'Overview' | 'Current fees' | 'Fee history' | 'Fee structure' | 'Courses' | 'Academic years' | 'Semesters' | 'Reminder history' | 'Late fee waivers'
+export type DashboardPageName = 'Overview' | 'Current fees' | 'Fee history' | 'Fee structure' | 'Courses' | 'Batches' | 'Sessions' | 'Semesters' | 'Reminder history' | 'Late fee waivers'
 type DashboardPageProps = {
   onLogout: () => void
   initialPage: DashboardPageName
@@ -22,7 +22,8 @@ const navItems: { label: DashboardPageName; icon: IconName }[] = [
   { label: 'Fee history', icon: 'receipt' },
   { label: 'Fee structure', icon: 'receipt' },
   { label: 'Courses', icon: 'settings' },
-  { label: 'Academic years', icon: 'calendar' },
+  { label: 'Batches', icon: 'calendar' },
+  { label: 'Sessions', icon: 'calendar' },
   { label: 'Semesters', icon: 'calendar' },
   { label: 'Reminder history', icon: 'bell' },
   { label: 'Late fee waivers', icon: 'receipt' },
@@ -45,7 +46,7 @@ export function DashboardPage({ onLogout, initialPage, role, onNavigate }: Dashb
   }).format(new Date())
 
   const setActive = (page: DashboardPageName) => onNavigate(page)
-  const visibleNavItems = role === 'SUPERADMIN' ? navItems : navItems.filter(item => !['Courses', 'Academic years', 'Semesters'].includes(item.label))
+  const visibleNavItems = role === 'SUPERADMIN' ? navItems : navItems.filter(item => !['Courses', 'Batches', 'Sessions', 'Semesters'].includes(item.label))
 
   return <div className={`app-shell${sidebarCollapsed ? ' sidebar-collapsed' : ''}`}>
     <aside className={`sidebar ${menuOpen ? 'sidebar-open' : ''}`}>
@@ -74,7 +75,7 @@ export function DashboardPage({ onLogout, initialPage, role, onNavigate }: Dashb
 
       {notice && <div className="toast" role="status">{notice}<button onClick={() => setNotice('')}>×</button></div>}
       <div className="page-content">
-        {active === 'Current fees' ? <StudentFeeManagement onNotice={setNotice} view="students" refreshKey={dataRefreshKey} canImportStudents={role === 'SUPERADMIN'} onAddStudent={role === 'SUPERADMIN' ? () => setCreateSection('Add student') : undefined}/> : active === 'Fee history' ? <FeeHistoryPage/> : active === 'Reminder history' ? <StudentFeeManagement onNotice={setNotice} view="reminders"/> : active === 'Fee structure' ? <FeeStructurePage refreshKey={dataRefreshKey} onNotice={setNotice} onAddFeeStructure={role === 'SUPERADMIN' ? () => setCreateSection('Add fee structure') : undefined}/> : active === 'Late fee waivers' ? <LateFeeWaivers/> : role === 'SUPERADMIN' && (active === 'Courses' || active === 'Academic years' || active === 'Semesters') ? <AdminManagementPage section={active as ManagementListSection} refreshKey={dataRefreshKey} onCreate={setCreateSection} onNotice={setNotice}/> : <OverviewDashboard onNotice={setNotice} onFeeStructure={() => setActive('Fee structure')}/>}
+        {active === 'Current fees' ? <StudentFeeManagement onNotice={setNotice} view="students" refreshKey={dataRefreshKey} canImportStudents={role === 'SUPERADMIN'} onAddStudent={role === 'SUPERADMIN' ? () => setCreateSection('Add student') : undefined}/> : active === 'Fee history' ? <FeeHistoryPage/> : active === 'Reminder history' ? <StudentFeeManagement onNotice={setNotice} view="reminders"/> : active === 'Fee structure' ? <FeeStructurePage refreshKey={dataRefreshKey} onNotice={setNotice} onAddFeeStructure={role === 'SUPERADMIN' ? () => setCreateSection('Add fee structure') : undefined}/> : active === 'Late fee waivers' ? <LateFeeWaivers canWaive={role === 'ADMIN' || role === 'SUPERADMIN'}/> : role === 'SUPERADMIN' && (active === 'Courses' || active === 'Batches' || active === 'Sessions' || active === 'Semesters') ? <AdminManagementPage section={active as ManagementListSection} refreshKey={dataRefreshKey} onCreate={setCreateSection} onNotice={setNotice}/> : <OverviewDashboard onNotice={setNotice} onFeeStructure={() => setActive('Fee structure')}/>}
       </div>
       {createSection && role === 'SUPERADMIN' && <AdminManagementModal section={createSection} onClose={() => setCreateSection(null)} onSaved={() => setDataRefreshKey(key => key + 1)} onNotice={setNotice}/>}
     </main>

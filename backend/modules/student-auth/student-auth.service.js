@@ -7,7 +7,6 @@ const crypto = require("crypto");
 
 const DEMO_OTP = "111111";
 const OTP_TTL_MS = 5 * 60 * 1000;
-const pendingOtps = new Map();
 
 function normalizePhoneNumber(value) {
   let digits = String(value || "").replace(/\D/g, "");
@@ -48,11 +47,12 @@ async function requestOtp(phoneNumber) {
     });
   }
 
-  pendingOtps.set(normalizedPhone, {
-    studentId: student.id,
-    otp: DEMO_OTP,
-    expiresAt: Date.now() + OTP_TTL_MS,
-  });
+  const expiresAt = new Date(Date.now() + OTP_TTL_MS);
+  const otpHash = crypto.createHash("sha256").update(DEMO_OTP).digest("hex");
+  await prisma.$executeRaw`DELETE FROM student_otps WHERE expires_at <= CURRENT_TIMESTAMP(3)`;
+  await prisma.$executeRaw`INSERT INTO student_otps (student_id, phone_number, otp_hash, expires_at, attempts)
+    VALUES (${student.id}, ${normalizedPhone}, ${otpHash}, ${expiresAt}, 0)
+    ON DUPLICATE KEY UPDATE student_id = VALUES(student_id), otp_hash = VALUES(otp_hash), expires_at = VALUES(expires_at), attempts = 0, created_at = CURRENT_TIMESTAMP(3)`;
   return {
     message: "OTP sent.",
     phoneNumber: normalizedPhone,
@@ -63,9 +63,30 @@ async function requestOtp(phoneNumber) {
 
 async function verifyOtp(phoneNumber, otp) {
   const normalizedPhone = normalizePhoneNumber(phoneNumber);
-  const pending = pendingOtps.get(normalizedPhone);
-  pendingOtps.delete(normalizedPhone);
-  if (!pending || pending.expiresAt < Date.now() || pending.otp !== otp) {
+  const pending = await prisma.$transaction(async (tx) => {
+    const rows = await tx.$queryRaw`SELECT student_id AS studentId, otp_hash AS otpHash, expires_at AS expiresAt, attempts
+      FROM student_otps WHERE phone_number = ${normalizedPhone} LIMIT 1`;
+    const challenge = rows[0];
+    if (!challenge) return null;
+    if (new Date(challenge.expiresAt).getTime() <= Date.now()) {
+      await tx.$executeRaw`DELETE FROM student_otps WHERE phone_number = ${normalizedPhone}`;
+      return null;
+    }
+    const suppliedHash = crypto.createHash("sha256").update(otp).digest();
+    const storedHash = Buffer.from(challenge.otpHash, "hex");
+    const matches = storedHash.length === suppliedHash.length && crypto.timingSafeEqual(storedHash, suppliedHash);
+    if (!matches) {
+      if (challenge.attempts + 1 >= 5) {
+        await tx.$executeRaw`DELETE FROM student_otps WHERE phone_number = ${normalizedPhone}`;
+      } else {
+        await tx.$executeRaw`UPDATE student_otps SET attempts = attempts + 1 WHERE phone_number = ${normalizedPhone}`;
+      }
+      return null;
+    }
+    await tx.$executeRaw`DELETE FROM student_otps WHERE phone_number = ${normalizedPhone}`;
+    return challenge;
+  });
+  if (!pending) {
     throw httpError(401, "INVALID_OR_EXPIRED_OTP");
   }
 
@@ -78,7 +99,8 @@ async function verifyOtp(phoneNumber, otp) {
       phoneNumber: true,
       studyYear: true,
       course: { select: { courseName: true, affiliation: true } },
-      academicYear: { select: { label: true } },
+      batch: { select: { label: true } },
+      session: { select: { label: true } },
     },
   });
   if (!student || student.phoneNumber.replace(/\D/g, "").slice(-10) !== normalizedPhone) {
@@ -139,7 +161,7 @@ async function getStudentReceipt(studentId, paymentId) {
 async function getProfile(studentId) {
   const student = await prisma.student.findUnique({
     where: { id: studentId },
-    include: { course: true, academicYear: true, feeAccounts: { include: { ledgerEntries: { include: { semester: true }, orderBy: { id: "asc" } } } } },
+    include: { course: true, batch: true, session: true, feeAccounts: { include: { ledgerEntries: { include: { semester: true }, orderBy: { id: "asc" } } } } },
   });
   if (!student || student.status !== "ACTIVE") throw httpError(404, "STUDENT_ACCOUNT_UNAVAILABLE");
   const semesters = new Map();
@@ -162,7 +184,7 @@ async function getProfile(studentId) {
     }
   }
   return {
-    student: { id: student.id, name: student.name, registrationNo: student.registrationNumber, phone: student.phoneNumber, course: student.course.courseName, batch: Number(student.academicYear.label), year: student.studyYear },
+    student: { id: student.id, name: student.name, registrationNo: student.registrationNumber, phone: student.phoneNumber, course: student.course.courseName, batch: student.batch.label, session: student.session.label, year: student.studyYear },
     fees: [...semesters.values()].sort((a, b) => a.semester - b.semester).map((row) => ({
       ...row,
       status: row.paid >= row.fee && row.fee > 0 ? "Paid" : row.dueDate > new Date() ? "Upcoming" : "Due",

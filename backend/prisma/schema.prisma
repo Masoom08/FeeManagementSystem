@@ -102,12 +102,26 @@ model Course {
   lateFeePerDay Int            @map("late_fee_per_day")
   active        Boolean        @default(true)
   students      Student[]
+  batches       Batch[]
   feeStructures FeeStructure[]
+  feeDeadlines  CourseFeeDeadline[]
 
   @@map("courses")
 }
 
-model AcademicYear {
+model CourseFeeDeadline {
+  id          Int      @id @default(autoincrement())
+  courseId    Int      @map("course_id")
+  semesterType String  @map("semester_type") @db.VarChar(10)
+  month       Int
+  day         Int
+  course      Course   @relation(fields: [courseId], references: [id])
+
+  @@unique([courseId, semesterType], map: "course_fee_deadlines_course_semester_key")
+  @@map("course_fee_deadlines")
+}
+
+model Session {
   id            Int            @id @default(autoincrement())
   label         String         @unique @db.VarChar(20)
   startDate     DateTime       @map("start_date") @db.Date
@@ -117,38 +131,52 @@ model AcademicYear {
   feeAccounts   FeeAccount[]
   students      Student[]
 
-  @@map("academic_years")
+  @@map("sessions")
+}
+
+model Batch {
+  id        Int       @id @default(autoincrement())
+  courseId  Int       @map("course_id")
+  label     String    @db.VarChar(20)
+  startDate DateTime  @map("start_date") @db.Date
+  endDate   DateTime  @map("end_date") @db.Date
+  course    Course    @relation(fields: [courseId], references: [id])
+  students  Student[]
+
+  @@unique([courseId, label])
+  @@map("batches")
 }
 
 model Semester {
   id             Int            @id @default(autoincrement())
-  academicYearId Int            @map("academic_year_id")
+  sessionId      Int            @map("session_id")
   name           String         @db.VarChar(40)
   dueDate        DateTime       @map("due_date") @db.Date
   graceDays      Int            @map("grace_days")
   fineEndDate    DateTime?      @map("fine_end_date") @db.Date
-  academicYear   AcademicYear   @relation(fields: [academicYearId], references: [id])
+  session        Session        @relation(fields: [sessionId], references: [id])
   feeStructures  FeeStructure[]
   ledgerEntries  LedgerEntry[]
   students       Student[]
 
-  @@unique([academicYearId, name])
+  @@unique([sessionId, name], map: "semesters_session_name_key")
   @@map("semesters")
 }
 
 model FeeStructure {
   id             Int          @id @default(autoincrement())
   courseId       Int          @map("course_id")
-  academicYearId Int          @map("academic_year_id")
+  sessionId      Int          @map("session_id")
   semesterId     Int          @map("semester_id")
   component      FeeComponent
   studyYear      Int          @map("study_year")
   amount         Int
   course         Course       @relation(fields: [courseId], references: [id])
-  academicYear   AcademicYear @relation(fields: [academicYearId], references: [id])
+  session        Session      @relation(fields: [sessionId], references: [id])
   semester       Semester     @relation(fields: [semesterId], references: [id])
 
-  @@unique([courseId, academicYearId, semesterId, component, studyYear])
+  @@unique([courseId, sessionId, semesterId, component, studyYear], map: "fee_structures_session_key")
+  @@index([courseId], map: "fee_structures_course_id_idx")
   @@map("fee_structures")
 }
 
@@ -173,7 +201,8 @@ model Student {
   fatherName           String         @map("father_name") @db.VarChar(120)
   branch               String         @db.VarChar(80)
   courseId             Int            @map("course_id")
-  academicYearId       Int            @map("academic_year_id")
+  batchId              Int            @map("batch_id")
+  sessionId            Int            @map("session_id")
   admissionSemesterId  Int            @map("admission_semester_id")
   admissionType        AdmissionType  @map("admission_type")
   isHosteller          Boolean        @default(false) @map("is_hosteller")
@@ -181,25 +210,42 @@ model Student {
   status               StudentStatus  @default(ACTIVE)
   leftOn               DateTime?      @map("left_on") @db.Date
   course               Course         @relation(fields: [courseId], references: [id])
-  academicYear         AcademicYear   @relation(fields: [academicYearId], references: [id])
+  batch                Batch          @relation(fields: [batchId], references: [id])
+  session              Session        @relation(fields: [sessionId], references: [id])
   admissionSemester    Semester       @relation(fields: [admissionSemesterId], references: [id])
   feeAccounts          FeeAccount[]
+  otpChallenges        StudentOtp[]
   reminders            Reminder[]
 
   @@map("students")
+}
+
+model StudentOtp {
+  id          Int      @id @default(autoincrement())
+  studentId   Int      @map("student_id")
+  phoneNumber String   @unique(map: "student_otps_phone_number_key") @map("phone_number") @db.VarChar(20)
+  otpHash     String   @map("otp_hash") @db.Char(64)
+  expiresAt   DateTime @map("expires_at") @db.DateTime(3)
+  attempts    Int      @default(0)
+  createdAt   DateTime @default(now()) @map("created_at") @db.DateTime(3)
+  student     Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@index([expiresAt], map: "student_otps_expires_at_idx")
+  @@map("student_otps")
 }
 
 model FeeAccount {
   id             Int                 @id @default(autoincrement())
   studentId      Int                 @map("student_id")
   product        FeeProduct
-  academicYearId Int                 @map("academic_year_id")
+  sessionId      Int                 @map("session_id")
   student        Student             @relation(fields: [studentId], references: [id])
-  academicYear   AcademicYear        @relation(fields: [academicYearId], references: [id])
+  session        Session             @relation(fields: [sessionId], references: [id])
   ledgerEntries  LedgerEntry[]
   allocations    PaymentAllocation[]
 
-  @@unique([studentId, product, academicYearId])
+  @@unique([studentId, product, sessionId], map: "fee_accounts_student_product_session_key")
+  @@index([studentId], map: "fee_accounts_student_id_idx")
   @@map("fee_accounts")
 }
 

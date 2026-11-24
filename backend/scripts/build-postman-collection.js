@@ -30,7 +30,8 @@ function studentBody(registrationNumber, name, email, ids) {
     fatherName: `${name} Father`,
     branch: "Management",
     courseId: ids.courseId,
-    academicYearId: ids.academicYearId,
+    batchId: ids.batchId,
+    sessionId: ids.sessionId,
     semesterId: ids.semesterId,
     admissionType: "DIRECT",
   };
@@ -326,26 +327,35 @@ async function main() {
   await record({
     module: "Fee",
     group: "Success",
-    title: "Create academic year",
+    title: "Create session",
     method: "POST",
-    path: "/api/academic-years",
+    path: "/api/sessions",
     body: { label: "2026-27", startDate: "2026-07-01", endDate: "2027-06-30" },
   });
   const years = dataOf(
     await record({
       module: "Fee",
       group: "Success",
-      title: "List academic years",
+      title: "List sessions",
       method: "GET",
-      path: "/api/academic-years",
+      path: "/api/sessions",
     }),
-    "list academic years"
+    "list sessions"
   );
   const year = years.find((item) => item.label === "2026-27");
   if (!year) {
-    throw new Error("academic year 2026-27 was not found");
+    throw new Error("session 2026-27 was not found");
   }
-  variables.academicYearId = String(year.id);
+  variables.sessionId = String(year.id);
+  const batch = dataOf(await record({
+    module: "Student",
+    group: "Success",
+    title: "Create batch",
+    method: "POST",
+    path: "/api/batches",
+    body: { courseId: mba.id, label: "2026-28", startDate: "2026-07-01", endDate: "2028-06-30" },
+  }), "create batch");
+  variables.batchId = String(batch.id);
 
   const semesterCreate = await record({
     module: "Fee",
@@ -353,7 +363,7 @@ async function main() {
     title: "Create semester",
     method: "POST",
     path: "/api/semesters",
-    body: { academicYearId: year.id, name: "SEMESTER_1", dueDate: "2026-07-01", graceDays: 5 },
+    body: { sessionId: year.id, name: "SEMESTER_1", dueDate: "2026-07-01", graceDays: 5 },
   });
   const semesters = dataOf(
     await record({
@@ -368,7 +378,7 @@ async function main() {
   const semester =
     semesterCreate.json?.data?.id != null
       ? semesterCreate.json.data
-      : semesters.find((item) => item.academicYearId === year.id && item.name === "SEMESTER_1");
+      : semesters.find((item) => item.sessionId === year.id && item.name === "SEMESTER_1");
   if (!semester) {
     throw new Error(`semester was not created (${semesterCreate.status}) ${semesterCreate.text.slice(0, 300)}`);
   }
@@ -389,7 +399,7 @@ async function main() {
       path: "/api/fee-structures",
       body: {
         courseId: mba.id,
-        academicYearId: year.id,
+        sessionId: year.id,
         semesterId: semester.id,
         component,
         studyYear: 1,
@@ -411,7 +421,7 @@ async function main() {
     const found = structures.find(
       (item) =>
         item.courseId === mba.id &&
-        item.academicYearId === year.id &&
+        item.sessionId === year.id &&
         item.semesterId === semester.id &&
         item.component === component &&
         item.studyYear === 1
@@ -421,7 +431,7 @@ async function main() {
     }
   }
 
-  const ids = { courseId: mba.id, academicYearId: year.id, semesterId: semester.id };
+  const ids = { courseId: mba.id, batchId: batch.id, sessionId: year.id, semesterId: semester.id };
 
   async function ensureStudent(module, group, title, registrationNumber, name, email) {
     const created = await record({
@@ -663,7 +673,7 @@ async function main() {
     title: "Unknown fee component",
     method: "POST",
     path: "/api/fee-structures",
-    body: { courseId: mba.id, academicYearId: year.id, semesterId: semester.id, component: "LIBRARY", studyYear: 1, amount: 1000 },
+    body: { courseId: mba.id, sessionId: year.id, semesterId: semester.id, component: "LIBRARY", studyYear: 1, amount: 1000 },
   });
   await record({
     module: "Fee",
@@ -671,7 +681,7 @@ async function main() {
     title: "Fee amount of 0",
     method: "POST",
     path: "/api/fee-structures",
-    body: { courseId: mba.id, academicYearId: year.id, semesterId: semester.id, component: "ACADEMIC_FEE", studyYear: 2, amount: 0 },
+    body: { courseId: mba.id, sessionId: year.id, semesterId: semester.id, component: "ACADEMIC_FEE", studyYear: 2, amount: 0 },
   });
   await record({
     module: "Fee",
@@ -679,7 +689,7 @@ async function main() {
     title: "Unknown course",
     method: "POST",
     path: "/api/fee-structures",
-    body: { courseId: 999999, academicYearId: year.id, semesterId: semester.id, component: "ACADEMIC_FEE", studyYear: 1, amount: 1000 },
+    body: { courseId: 999999, sessionId: year.id, semesterId: semester.id, component: "ACADEMIC_FEE", studyYear: 1, amount: 1000 },
   });
   await record({
     module: "Fee",
@@ -687,7 +697,7 @@ async function main() {
     title: "Duplicate fee structure",
     method: "POST",
     path: "/api/fee-structures",
-    body: { courseId: mba.id, academicYearId: year.id, semesterId: semester.id, component: "ACADEMIC_FEE", studyYear: 1, amount: 10000 },
+    body: { courseId: mba.id, sessionId: year.id, semesterId: semester.id, component: "ACADEMIC_FEE", studyYear: 1, amount: 10000 },
   });
 
   await record({
@@ -704,7 +714,7 @@ async function main() {
       fatherName: "Father",
       branch: "Management",
       courseId: mba.id,
-      academicYearId: year.id,
+      sessionId: year.id,
       semesterId: semester.id,
       admissionType: "DIRECT",
     },
@@ -892,7 +902,7 @@ async function main() {
     "admissionType",
     "isHosteller",
     "studyYear",
-    "academicYearLabel",
+    "sessionLabel",
     "semesterName",
   ];
   async function writeSheet(fileName, rows) {

@@ -1,6 +1,6 @@
 const prisma = require("../../lib/prisma");
 const { badRequest, conflict, notFound } = require("../../lib/errors");
-const { addDays, diffDays, parseISODate, todayUTC } = require("../../lib/dates");
+const { addDays, diffDays, formatISODate, parseISODate, todayUTC } = require("../../lib/dates");
 const { balances, postedFineTotal, principalOutstanding } = require("../../lib/balance");
 const { componentFor } = require("./assess");
 
@@ -13,62 +13,62 @@ function presentAccount(account) {
   };
 }
 
-async function createAcademicYear(data) {
+async function createSession(data) {
   const startDate = parseISODate(data.startDate);
   const endDate = parseISODate(data.endDate);
   if (endDate <= startDate) {
     throw badRequest("INVALID_DATE_RANGE", [{ path: "endDate", message: "endDate must be after startDate" }]);
   }
   try {
-    return await prisma.academicYear.create({
+    return await prisma.session.create({
       data: { label: data.label, startDate, endDate },
     });
   } catch (err) {
     if (err.code === "P2002") {
-      throw conflict("DUPLICATE_ACADEMIC_YEAR");
+      throw conflict("DUPLICATE_SESSION");
     }
     throw err;
   }
 }
 
-function listAcademicYears() {
-  return prisma.academicYear.findMany({ orderBy: { id: "asc" } });
+function listSessions() {
+  return prisma.session.findMany({ orderBy: { id: "asc" } });
 }
 
-async function updateAcademicYear(id, data) {
-  const existing = await prisma.academicYear.findUnique({ where: { id } });
-  if (!existing) throw notFound("ACADEMIC_YEAR_NOT_FOUND");
+async function updateSession(id, data) {
+  const existing = await prisma.session.findUnique({ where: { id } });
+  if (!existing) throw notFound("SESSION_NOT_FOUND");
   const startDate = data.startDate ? parseISODate(data.startDate) : existing.startDate;
   const endDate = data.endDate ? parseISODate(data.endDate) : existing.endDate;
   if (endDate <= startDate) throw badRequest("INVALID_DATE_RANGE", [{ path: "endDate", message: "endDate must be after startDate" }]);
   try {
-    return await prisma.academicYear.update({ where: { id }, data: { ...data, startDate, endDate } });
+    return await prisma.session.update({ where: { id }, data: { ...data, startDate, endDate } });
   } catch (err) {
-    if (err.code === "P2002") throw conflict("DUPLICATE_ACADEMIC_YEAR");
+    if (err.code === "P2002") throw conflict("DUPLICATE_SESSION");
     throw err;
   }
 }
 
-async function deleteAcademicYear(id) {
-  const existing = await prisma.academicYear.findUnique({ where: { id } });
-  if (!existing) throw notFound("ACADEMIC_YEAR_NOT_FOUND");
-  const counts = await prisma.academicYear.findUnique({ where: { id }, include: { _count: { select: { semesters: true, feeStructures: true, feeAccounts: true, students: true } } } });
+async function deleteSession(id) {
+  const existing = await prisma.session.findUnique({ where: { id } });
+  if (!existing) throw notFound("SESSION_NOT_FOUND");
+  const counts = await prisma.session.findUnique({ where: { id }, include: { _count: { select: { semesters: true, feeStructures: true, feeAccounts: true, students: true } } } });
   if (Object.values(counts._count).some(Boolean)) {
-    throw conflict("ACADEMIC_YEAR_IN_USE", [{ message: "This batch is linked to students, fee accounts, semesters, or fee structures and cannot be deleted." }]);
+    throw conflict("SESSION_IN_USE", [{ message: "This session is linked to students, fee accounts, semesters, or fee structures and cannot be deleted." }]);
   }
-  await prisma.academicYear.delete({ where: { id } });
+  await prisma.session.delete({ where: { id } });
   return { id, deleted: true };
 }
 
 async function createSemester(data) {
-  const year = await prisma.academicYear.findUnique({ where: { id: data.academicYearId } });
+  const year = await prisma.session.findUnique({ where: { id: data.sessionId } });
   if (!year) {
-    throw notFound("ACADEMIC_YEAR_NOT_FOUND");
+    throw notFound("SESSION_NOT_FOUND");
   }
   try {
     return await prisma.semester.create({
       data: {
-        academicYearId: data.academicYearId,
+        sessionId: data.sessionId,
         name: data.name,
         dueDate: parseISODate(data.dueDate),
         graceDays: data.graceDays,
@@ -116,7 +116,7 @@ async function deleteSemester(id) {
 async function createFeeStructure(data) {
   const [course, year, semester] = await Promise.all([
     prisma.course.findUnique({ where: { id: data.courseId } }),
-    prisma.academicYear.findUnique({ where: { id: data.academicYearId } }),
+    prisma.session.findUnique({ where: { id: data.sessionId } }),
     prisma.semester.findUnique({ where: { id: data.semesterId } }),
   ]);
   if (!course) {
@@ -126,9 +126,9 @@ async function createFeeStructure(data) {
     throw conflict("COURSE_INACTIVE", [{ message: "This course is inactive and cannot be used for a new fee structure." }]);
   }
   if (!year) {
-    throw notFound("ACADEMIC_YEAR_NOT_FOUND");
+    throw notFound("SESSION_NOT_FOUND");
   }
-  if (!semester || semester.academicYearId !== data.academicYearId) {
+  if (!semester || semester.sessionId !== data.sessionId) {
     throw notFound("SEMESTER_NOT_FOUND");
   }
   try {
@@ -141,9 +141,9 @@ async function createFeeStructure(data) {
   }
 }
 
-function listFeeStructures(academicYearId) {
+function listFeeStructures(sessionId) {
   return prisma.feeStructure.findMany({
-    where: academicYearId ? { academicYearId } : {},
+    where: sessionId ? { sessionId } : {},
     orderBy: [{ courseId: "asc" }, { semesterId: "asc" }, { component: "asc" }],
   });
 }
@@ -154,12 +154,12 @@ async function updateFeeStructure(id, data) {
   const next = { ...existing, ...data };
   const [course, year, semester] = await Promise.all([
     prisma.course.findUnique({ where: { id: next.courseId } }),
-    prisma.academicYear.findUnique({ where: { id: next.academicYearId } }),
+    prisma.session.findUnique({ where: { id: next.sessionId } }),
     prisma.semester.findUnique({ where: { id: next.semesterId } }),
   ]);
   if (!course) throw notFound("COURSE_NOT_FOUND");
-  if (!year) throw notFound("ACADEMIC_YEAR_NOT_FOUND");
-  if (!semester || semester.academicYearId !== next.academicYearId) throw notFound("SEMESTER_NOT_FOUND");
+  if (!year) throw notFound("SESSION_NOT_FOUND");
+  if (!semester || semester.sessionId !== next.sessionId) throw notFound("SEMESTER_NOT_FOUND");
   try {
     return await prisma.feeStructure.update({ where: { id }, data });
   } catch (err) {
@@ -280,6 +280,117 @@ async function waiveFine(entryId, data) {
   });
 }
 
+function semesterNumber(name) {
+  const match = String(name).match(/(\d+)\s*$/);
+  return match ? Number(match[1]) : 0;
+}
+
+function scheduledDeadline(schedule, today) {
+  const year = today.getUTCFullYear();
+  let dueDate = new Date(Date.UTC(year, schedule.month - 1, schedule.day));
+  if (dueDate > today && dueDate.getUTCMonth() !== today.getUTCMonth()) {
+    dueDate = new Date(Date.UTC(year - 1, schedule.month - 1, schedule.day));
+  }
+  return dueDate;
+}
+
+async function readCourseDeadlines() {
+  try {
+    return await prisma.$queryRaw`SELECT course_id AS courseId, semester_type AS semesterType, month, day FROM course_fee_deadlines`;
+  } catch (error) {
+    // Keep the fees page available while a local database is waiting for migrations.
+    if (error.code === "P2010" && String(error.meta?.message ?? "").includes("course_fee_deadlines")) return [];
+    throw error;
+  }
+}
+
+async function getLateFeeDashboard() {
+  const today = todayUTC();
+  const [courses, deadlines, accounts] = await Promise.all([
+    prisma.course.findMany({ where: { active: true }, orderBy: { courseName: "asc" } }),
+    readCourseDeadlines(),
+    prisma.feeAccount.findMany({
+    where: { product: "ACADEMIC", student: { status: "ACTIVE" } },
+      include: { ledgerEntries: true, student: { include: { course: true, batch: true, session: true, admissionSemester: true } } },
+    }),
+  ]);
+  const deadlinesByCourse = new Map();
+  for (const deadline of deadlines) {
+    const rows = deadlinesByCourse.get(deadline.courseId) ?? [];
+    rows.push(deadline);
+    deadlinesByCourse.set(deadline.courseId, rows);
+  }
+  // Deadlines are managed in course_fee_deadlines. Missing rows stay unconfigured
+  // instead of silently substituting an in-code date.
+  const schedulesFor = (course) => deadlinesByCourse.get(course.id) ?? [];
+  const students = [];
+  for (const account of accounts) {
+    const student = account.student;
+    if (account.sessionId !== student.sessionId) continue;
+    const course = courses.find((item) => item.id === student.courseId);
+    if (!course) continue;
+    const semester = student.admissionSemester;
+    const number = semesterNumber(semester.name);
+    if (!number || principalOutstanding(account.ledgerEntries, semester.id) <= 0) continue;
+    const type = number % 2 ? "ODD" : "EVEN";
+    const schedule = schedulesFor(course).find((item) => item.semesterType === type);
+    if (!schedule) continue;
+    const dueDate = scheduledDeadline(schedule, today);
+    const daysOverdue = Math.max(0, diffDays(today, dueDate));
+    if (!daysOverdue) continue;
+    const ratePerDay = course.lateFeePerDay;
+    const fineAmount = daysOverdue * ratePerDay;
+    const fineEntries = account.ledgerEntries.filter((entry) => entry.semesterId === semester.id && entry.entryType === "FINE");
+    const fineEntryIds = fineEntries.map((entry) => entry.id);
+    const fineTotal = fineEntries.reduce((sum, entry) => sum + entry.amount, 0);
+    const waivedTotal = account.ledgerEntries.filter((entry) => entry.entryType === "WAIVER" && fineEntryIds.includes(entry.relatedEntryId)).reduce((sum, entry) => sum + entry.amount, 0);
+    students.push({
+      studentId: student.id, accountId: account.id, name: student.name,
+      registrationNumber: student.registrationNumber, phoneNumber: student.phoneNumber,
+      courseId: course.id, courseName: course.courseName, batch: student.batch.label,
+      studyYear: student.studyYear, semester: semester.name, semesterId: semester.id,
+      semesterFee: principalOutstanding(account.ledgerEntries, semester.id),
+      dueDate: formatISODate(dueDate), daysOverdue, ratePerDay, fineAmount,
+      waivedAmount: waivedTotal, pendingFine: Math.max(0, fineAmount - waivedTotal),
+      waivedAt: account.ledgerEntries.find((entry) => entry.entryType === "WAIVER" && fineEntryIds.includes(entry.relatedEntryId))?.effectiveDate ?? null,
+    });
+  }
+  return {
+    asOfDate: formatISODate(today),
+    courses: courses.map((course) => ({
+      id: course.id, courseName: course.courseName, lateFeePerDay: course.lateFeePerDay,
+      deadlines: schedulesFor(course).sort((a, b) => a.semesterType.localeCompare(b.semesterType)).map(({ semesterType, month, day }) => ({ semesterType, month, day })),
+    })),
+    students: students.sort((a, b) => b.fineAmount - a.fineAmount || a.name.localeCompare(b.name)),
+  };
+}
+
+async function waiveLateFeeForStudent(studentId, data) {
+  const dashboard = await getLateFeeDashboard();
+  const overdue = dashboard.students.find((student) => student.studentId === studentId);
+  if (!overdue) throw notFound("OVERDUE_STUDENT_NOT_FOUND");
+  if (overdue.pendingFine <= 0) throw conflict("FINE_ALREADY_WAIVED");
+  return prisma.$transaction(async (tx) => {
+    const account = await tx.feeAccount.findUnique({ where: { id: overdue.accountId }, include: { ledgerEntries: true } });
+    const fineEntries = account.ledgerEntries.filter((entry) => entry.semesterId === overdue.semesterId && entry.entryType === "FINE");
+    const posted = fineEntries.reduce((sum, entry) => sum + entry.amount, 0);
+    const fine = posted < overdue.fineAmount ? await tx.ledgerEntry.create({
+      data: {
+        feeAccountId: account.id, semesterId: overdue.semesterId, bucket: "DUES", entryType: "FINE", direction: "INCREASE",
+        amount: overdue.fineAmount - posted, component: "ACADEMIC_FEE", effectiveDate: parseISODate(dashboard.asOfDate),
+        actedBy: data.actedBy, reason: `Late fee for ${overdue.daysOverdue} day(s) at Rs ${overdue.ratePerDay} per day`,
+      },
+    }) : fineEntries[0];
+    return tx.ledgerEntry.create({
+      data: {
+        feeAccountId: account.id, semesterId: overdue.semesterId, bucket: "DUES", entryType: "WAIVER", direction: "DECREASE",
+        amount: overdue.pendingFine, component: "ACADEMIC_FEE", effectiveDate: todayUTC(), actedBy: data.actedBy,
+        reason: data.reason, relatedEntryId: fine.id,
+      },
+    });
+  });
+}
+
 async function loadAccount(id) {
   const account = await prisma.feeAccount.findUnique({
     where: { id },
@@ -391,10 +502,10 @@ async function adjustDeposit(accountId, data) {
 }
 
 module.exports = {
-  createAcademicYear,
-  listAcademicYears,
-  updateAcademicYear,
-  deleteAcademicYear,
+  createSession,
+  listSessions,
+  updateSession,
+  deleteSession,
   createSemester,
   listSemesters,
   updateSemester,
@@ -407,6 +518,8 @@ module.exports = {
   getAccount,
   runFines,
   waiveFine,
+  getLateFeeDashboard,
+  waiveLateFeeForStudent,
   refundDeposit,
   adjustDeposit,
 };

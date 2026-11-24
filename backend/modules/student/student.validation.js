@@ -39,7 +39,8 @@ const createStudentBody = z
     fatherName: z.string().trim().min(1, "fatherName is required").max(120),
     branch: z.string().trim().min(1, "branch is required").max(80),
     courseId: z.number({ required_error: "courseId is required", invalid_type_error: "courseId must be an integer" }).int().positive(),
-    academicYearId: z.number({ required_error: "academicYearId is required", invalid_type_error: "academicYearId must be an integer" }).int().positive(),
+    batchId: z.number({ required_error: "batchId is required", invalid_type_error: "batchId must be an integer" }).int().positive(),
+    sessionId: z.number({ required_error: "sessionId is required", invalid_type_error: "sessionId must be an integer" }).int().positive(),
     semesterId: z.number({ required_error: "semesterId is required", invalid_type_error: "semesterId must be an integer" }).int().positive(),
     admissionType,
     isHosteller: z.boolean({ invalid_type_error: "isHosteller must be a boolean" }).optional(),
@@ -88,7 +89,8 @@ const importRowSchema = z
     admissionType,
     isHosteller: z.boolean({ invalid_type_error: "isHosteller must be a boolean" }),
     studyYear: z.number().int().positive("studyYear must be a positive integer"),
-    academicYearLabel: z.string().trim().min(1, "academicYearLabel is required").max(20),
+    batchLabel: z.string().trim().min(1, "batchLabel is required").max(20),
+    sessionLabel: z.string().trim().min(1, "sessionLabel is required").max(20),
     semesterName: z.string().trim().min(1, "semesterName is required").max(40),
   })
   .strict();

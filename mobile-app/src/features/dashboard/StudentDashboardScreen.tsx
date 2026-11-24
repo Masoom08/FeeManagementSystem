@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { Alert, Keyboard, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, View } from 'react-native'
+import { Alert, Keyboard, KeyboardAvoidingView, ScrollView, StyleSheet, Text, View } from 'react-native'
 import type { ScrollViewInstance } from 'react-native'
 import { DashboardHeader } from '../../components/DashboardHeader'
 import { DashboardTabs, type DashboardTab } from '../../components/DashboardTabs'
@@ -97,7 +97,7 @@ export function StudentDashboardScreen({ token, student, onSignOut }: StudentDas
   }
 
   return (
-    <>
+    <KeyboardAvoidingView style={styles.keyboardSafeArea} behavior="padding">
       <DashboardHeader firstName={student.name.split(' ')[0]} onOpenMenu={() => setIsSidebarOpen(true)}/>
       <StudentSidebar
         visible={isSidebarOpen}
@@ -105,7 +105,6 @@ export function StudentDashboardScreen({ token, student, onSignOut }: StudentDas
         onClose={() => setIsSidebarOpen(false)}
         onSignOut={() => { setIsSidebarOpen(false); onSignOut() }}
       />
-      <KeyboardAvoidingView style={styles.keyboardSafeArea} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <ScrollView ref={dashboardScrollRef} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled" keyboardDismissMode="on-drag">
         <View style={styles.metrics}>
           <SummaryMetricCard label="PAID TO DATE" value={formatCurrency(paidTotal)}/>
@@ -142,8 +141,7 @@ export function StudentDashboardScreen({ token, student, onSignOut }: StudentDas
         <View style={styles.securityNote}><Text style={styles.securityIcon}>◇</Text><Text style={styles.securityText}>Mock payments create a pending order. Choose success or failure to simulate the result and save it to your payment history.</Text></View>
         <Text style={styles.footer}>Need help with your fees? Contact the institute accounts office.</Text>
       </ScrollView>
-      </KeyboardAvoidingView>
-    </>
+    </KeyboardAvoidingView>
   )
 }
 

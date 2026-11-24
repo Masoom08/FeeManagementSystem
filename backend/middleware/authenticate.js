@@ -17,6 +17,11 @@ function requireSuperAdmin(req, res, next) {
   return next();
 }
 
+function requireFeeAdmin(req, res, next) {
+  if (!["ADMIN", "SUPERADMIN"].includes(req.auth?.role)) return next(httpError(403, "FORBIDDEN"));
+  return next();
+}
+
 function authenticateStudent(req, res, next) {
   const authorization = req.get("authorization") || "";
   const match = authorization.match(/^Bearer\s+(.+)$/i);
@@ -26,4 +31,4 @@ function authenticateStudent(req, res, next) {
   return next();
 }
 
-module.exports = { authenticate, authenticateStudent, requireSuperAdmin };
+module.exports = { authenticate, authenticateStudent, requireSuperAdmin, requireFeeAdmin };

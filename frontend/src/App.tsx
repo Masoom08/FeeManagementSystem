@@ -11,7 +11,8 @@ const routeByPage: Record<DashboardPageName, string> = {
   'Fee history': '/admin/fee-history',
   'Fee structure': '/admin/fees',
   Courses: '/admin/courses',
-  'Academic years': '/admin/academic-years',
+  Batches: '/admin/batches',
+  'Sessions': '/admin/sessions',
   Semesters: '/admin/semesters',
   'Reminder history': '/admin/reminders',
   'Late fee waivers': '/admin/waivers',
@@ -24,7 +25,8 @@ function pageFromPath(path: string): DashboardPageName {
   if (path.startsWith('/admin/fee-history')) return 'Fee history'
   if (path.startsWith('/admin/fees')) return 'Fee structure'
   if (path.startsWith('/admin/courses')) return 'Courses'
-  if (path.startsWith('/admin/academic-years')) return 'Academic years'
+  if (path.startsWith('/admin/batches')) return 'Batches'
+  if (path.startsWith('/admin/sessions')) return 'Sessions'
   if (path.startsWith('/admin/semesters')) return 'Semesters'
   if (path.startsWith('/admin/reminders')) return 'Reminder history'
   if (path.startsWith('/admin/waivers')) return 'Late fee waivers'
@@ -44,7 +46,7 @@ function App() {
   useEffect(() => {
     const role = sessionStorage.getItem(ROLE_STORAGE_KEY)
     const page = pageFromPath(pathname)
-    const restrictedPage = ['Courses', 'Academic years', 'Semesters'].includes(page)
+    const restrictedPage = ['Courses', 'Batches', 'Sessions', 'Semesters'].includes(page)
     if (pathname.startsWith('/admin') && role !== 'SUPERADMIN' && restrictedPage) {
       window.history.replaceState({}, '', routeByPage.Overview)
       setPathname(routeByPage.Overview)
@@ -74,10 +76,10 @@ function App() {
   if (signedIn && pathname.startsWith('/admin')) {
     const role = (sessionStorage.getItem(ROLE_STORAGE_KEY) as UserRole | null) ?? 'ADMIN'
     const requestedPage = pageFromPath(pathname)
-    const restrictedPage = ['Courses', 'Academic years', 'Semesters'].includes(requestedPage)
+    const restrictedPage = ['Courses', 'Batches', 'Sessions', 'Semesters'].includes(requestedPage)
     const page = role !== 'SUPERADMIN' && restrictedPage ? 'Overview' : requestedPage
     return <DashboardPage initialPage={page} role={role} onNavigate={nextPage => {
-      const nextRestricted = ['Courses', 'Academic years', 'Semesters'].includes(nextPage)
+      const nextRestricted = ['Courses', 'Batches', 'Sessions', 'Semesters'].includes(nextPage)
       if (role === 'SUPERADMIN' || !nextRestricted) navigate(routeByPage[nextPage])
     }} onLogout={signOut} />
   }

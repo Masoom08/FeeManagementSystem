@@ -4,7 +4,7 @@ const { actedBy, idParams, isoDate, positiveAmount } = require("../../lib/ids");
 const label = z.string().trim().min(1, "label is required").max(20, "label must be at most 20 characters");
 const name = z.string().trim().min(1, "name is required").max(40, "name must be at most 40 characters");
 
-const createAcademicYearBody = z
+const createSessionBody = z
   .object({
     label,
     startDate: isoDate,
@@ -12,13 +12,13 @@ const createAcademicYearBody = z
   })
   .strict();
 
-const updateAcademicYearBody = createAcademicYearBody.partial().strict().refine((value) => Object.keys(value).length > 0, {
+const updateSessionBody = createSessionBody.partial().strict().refine((value) => Object.keys(value).length > 0, {
   message: "At least one field is required", path: ["body"],
 });
 
 const createSemesterBody = z
   .object({
-    academicYearId: z.number().int().positive(),
+    sessionId: z.number().int().positive(),
     name,
     dueDate: isoDate,
     graceDays: z.number().int().min(0, "graceDays must be zero or greater"),
@@ -38,7 +38,7 @@ const updateSemesterBody = z.object({
 const createFeeStructureBody = z
   .object({
     courseId: z.number().int().positive(),
-    academicYearId: z.number().int().positive(),
+    sessionId: z.number().int().positive(),
     semesterId: z.number().int().positive(),
     component: z.enum(["ACADEMIC_FEE", "ACADEMIC_CAUTION", "HOSTEL_FEE", "HOSTEL_SECURITY"], {
       errorMap: () => ({ message: "component must be a fee component" }),
@@ -53,7 +53,7 @@ const updateFeeStructureBody = createFeeStructureBody.partial().strict().refine(
 });
 
 const feeStructuresQuery = z.object({
-  academicYearId: z.coerce.number().int().positive().optional(),
+  sessionId: z.coerce.number().int().positive().optional(),
 }).strict();
 
 const runFinesBody = z
@@ -70,6 +70,8 @@ const waiveFineBody = z
     reason: z.string().trim().min(1, "reason is required").max(255, "reason must be at most 255 characters"),
   })
   .strict();
+
+const waiveLateFeeBody = z.object({ actedBy, reason: z.string().trim().min(1).max(255) }).strict();
 
 const refundDepositBody = z
   .object({
@@ -94,8 +96,8 @@ const adjustDepositBody = z
   .strict();
 
 module.exports = {
-  createAcademicYearBody,
-  updateAcademicYearBody,
+  createSessionBody,
+  updateSessionBody,
   createSemesterBody,
   updateSemesterBody,
   createFeeStructureBody,
@@ -103,9 +105,11 @@ module.exports = {
   feeStructuresQuery,
   runFinesBody,
   waiveFineBody,
+  waiveLateFeeBody,
   refundDepositBody,
   adjustDepositBody,
   idParams: idParams(),
   entryIdParams: idParams("entryId"),
+  studentIdParams: idParams("studentId"),
   accountIdParams: idParams("accountId"),
 };

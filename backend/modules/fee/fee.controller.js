@@ -1,23 +1,23 @@
 const { asyncRoute } = require("../../lib/asyncRoute");
 const feeService = require("./fee.service");
 
-const createAcademicYear = asyncRoute(async (req, res) => {
-  const year = await feeService.createAcademicYear(req.body);
+const createSession = asyncRoute(async (req, res) => {
+  const year = await feeService.createSession(req.body);
   res.status(201).json({ success: true, data: year });
 });
 
-const listAcademicYears = asyncRoute(async (req, res) => {
-  const years = await feeService.listAcademicYears();
+const listSessions = asyncRoute(async (req, res) => {
+  const years = await feeService.listSessions();
   res.status(200).json({ success: true, data: years });
 });
 
-const updateAcademicYear = asyncRoute(async (req, res) => {
-  const year = await feeService.updateAcademicYear(Number(req.params.id), req.body);
+const updateSession = asyncRoute(async (req, res) => {
+  const year = await feeService.updateSession(Number(req.params.id), req.body);
   res.status(200).json({ success: true, data: year });
 });
 
-const deleteAcademicYear = asyncRoute(async (req, res) => {
-  const result = await feeService.deleteAcademicYear(Number(req.params.id));
+const deleteSession = asyncRoute(async (req, res) => {
+  const result = await feeService.deleteSession(Number(req.params.id));
   res.status(200).json({ success: true, data: result });
 });
 
@@ -47,7 +47,7 @@ const createFeeStructure = asyncRoute(async (req, res) => {
 });
 
 const listFeeStructures = asyncRoute(async (req, res) => {
-  const structures = await feeService.listFeeStructures(req.query.academicYearId);
+  const structures = await feeService.listFeeStructures(req.query.sessionId);
   res.status(200).json({ success: true, data: structures });
 });
 
@@ -81,6 +81,16 @@ const waiveFine = asyncRoute(async (req, res) => {
   res.status(201).json({ success: true, data: line });
 });
 
+const getLateFeeDashboard = asyncRoute(async (_req, res) => {
+  const result = await feeService.getLateFeeDashboard();
+  res.status(200).json({ success: true, data: result });
+});
+
+const waiveLateFeeForStudent = asyncRoute(async (req, res) => {
+  const result = await feeService.waiveLateFeeForStudent(Number(req.params.studentId), req.body);
+  res.status(201).json({ success: true, data: result });
+});
+
 const refundDeposit = asyncRoute(async (req, res) => {
   const result = await feeService.refundDeposit(req.params.accountId, req.body);
   res.status(201).json({ success: true, data: result });
@@ -92,10 +102,10 @@ const adjustDeposit = asyncRoute(async (req, res) => {
 });
 
 module.exports = {
-  createAcademicYear,
-  listAcademicYears,
-  updateAcademicYear,
-  deleteAcademicYear,
+  createSession,
+  listSessions,
+  updateSession,
+  deleteSession,
   createSemester,
   listSemesters,
   updateSemester,
@@ -108,6 +118,8 @@ module.exports = {
   getAccount,
   runFines,
   waiveFine,
+  getLateFeeDashboard,
+  waiveLateFeeForStudent,
   refundDeposit,
   adjustDeposit,
 };

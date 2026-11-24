@@ -3,6 +3,7 @@ require("./config/database-url");
 const express = require("express");
 const cors = require("cors");
 const courseRoutes = require("./modules/course/course.routes");
+const batchRoutes = require("./modules/batch/batch.routes");
 const feeRoutes = require("./modules/fee/fee.routes");
 const studentRoutes = require("./modules/student/student.routes");
 const paymentRoutes = require("./modules/payment/payment.routes");
@@ -27,11 +28,13 @@ app.get("/", (req, res) => {
       name: "ICCMRT Fee Management API",
       endpoints: [
         "/api/courses",
-        "/api/academic-years",
+        "/api/batches",
+        "/api/sessions",
         "/api/semesters",
         "/api/fee-structures",
         "/api/hostel-rates",
         "/api/fees",
+        "/api/fees/late-fees",
         "/api/students",
         "/api/students/imports/preview",
         "/api/students/imports/:id/commit",
@@ -52,7 +55,8 @@ app.get("/", (req, res) => {
   });
 });
 app.use("/api/courses", courseRoutes);
-app.use("/api/academic-years", feeRoutes.academicYears);
+app.use("/api/batches", batchRoutes);
+app.use("/api/sessions", feeRoutes.sessions);
 app.use("/api/semesters", feeRoutes.semesters);
 app.use("/api/fee-structures", feeRoutes.feeStructures);
 app.use("/api/hostel-rates", feeRoutes.hostelRates);

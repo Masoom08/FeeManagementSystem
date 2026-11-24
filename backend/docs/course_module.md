@@ -31,7 +31,7 @@ Cannot GET /
 The latest `main` adds this route. After Vercel publishes that commit the same URL returns `200`:
 
 ```json
-{"success":true,"data":{"name":"ICCMRT Fee Management API","endpoints":["/api/courses","/api/academic-years","/api/semesters","/api/fee-structures","/api/fees","/api/students","/api/payments","/api/receipts","/api/reminders","/api/reports"]}}
+{"success":true,"data":{"name":"ICCMRT Fee Management API","endpoints":["/api/courses","/api/sessions","/api/semesters","/api/fee-structures","/api/fees","/api/students","/api/payments","/api/receipts","/api/reminders","/api/reports"]}}
 ```
 
 | Method | Endpoint | Purpose |
@@ -366,5 +366,5 @@ Status: `400`
 ## Data on the deployment
 
 - Course `1`: `AKTU01`, name `MBA (AKTU)`, active.
-- Academic year `1`: `2026-27`.
+- Session `1`: `2026-27`.
 - No semesters, fee structures, students, payments, or reminders.

@@ -2,13 +2,13 @@ const express = require("express");
 const { validate } = require("../../middleware/validate");
 const schemas = require("./fee.validation");
 const controller = require("./fee.controller");
-const { requireSuperAdmin } = require("../../middleware/authenticate");
+const { requireSuperAdmin, requireFeeAdmin } = require("../../middleware/authenticate");
 
-const academicYears = express.Router();
-academicYears.post("/", requireSuperAdmin, validate({ body: schemas.createAcademicYearBody }), controller.createAcademicYear);
-academicYears.get("/", controller.listAcademicYears);
-academicYears.patch("/:id", requireSuperAdmin, validate({ params: schemas.idParams, body: schemas.updateAcademicYearBody }), controller.updateAcademicYear);
-academicYears.delete("/:id", requireSuperAdmin, validate({ params: schemas.idParams }), controller.deleteAcademicYear);
+const sessions = express.Router();
+sessions.post("/", requireSuperAdmin, validate({ body: schemas.createSessionBody }), controller.createSession);
+sessions.get("/", controller.listSessions);
+sessions.patch("/:id", requireSuperAdmin, validate({ params: schemas.idParams, body: schemas.updateSessionBody }), controller.updateSession);
+sessions.delete("/:id", requireSuperAdmin, validate({ params: schemas.idParams }), controller.deleteSession);
 
 const semesters = express.Router();
 semesters.post("/", requireSuperAdmin, validate({ body: schemas.createSemesterBody }), controller.createSemester);
@@ -26,6 +26,8 @@ const hostelRates = express.Router();
 hostelRates.get("/", controller.listHostelRates);
 
 const fees = express.Router();
+fees.get("/late-fees", controller.getLateFeeDashboard);
+fees.post("/late-fees/students/:studentId/waive", requireFeeAdmin, validate({ params: schemas.studentIdParams, body: schemas.waiveLateFeeBody }), controller.waiveLateFeeForStudent);
 fees.get("/accounts/:id", validate({ params: schemas.idParams }), controller.getAccount);
 fees.post("/fines/run", requireSuperAdmin, validate({ body: schemas.runFinesBody }), controller.runFines);
 fees.post("/fines/:entryId/waive", requireSuperAdmin, validate({ params: schemas.entryIdParams, body: schemas.waiveFineBody }), controller.waiveFine);
@@ -43,7 +45,7 @@ fees.post(
 );
 
 module.exports = {
-  academicYears,
+  sessions,
   semesters,
   feeStructures,
   hostelRates,

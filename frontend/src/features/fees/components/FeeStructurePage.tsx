@@ -1,10 +1,19 @@
-﻿import { useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { Icon } from '../../../components/ui/AppIcon'
-import { api, type ApiAcademicYear, type ApiCourse, type ApiFeeStructure, type ApiHostelRate, type ApiSemester } from '../../../api/client'
+import { api, type ApiSession, type ApiCourse, type ApiFeeStructure, type ApiHostelRate, type ApiSemester } from '../../../api/client'
 import './FeeStructurePage.css'
 
 const currency = new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 })
+
+function currentSessionId(sessions: ApiSession[]) {
+  const now = new Date()
+  const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
+  const ordered = [...sessions].sort((left, right) => left.startDate.localeCompare(right.startDate))
+  return ordered.find(session => session.startDate.slice(0, 10) <= today && session.endDate.slice(0, 10) >= today)?.id
+    ?? ordered.filter(session => session.startDate.slice(0, 10) <= today).at(-1)?.id
+    ?? ordered[0]?.id
+}
 
 export function FeeStructurePage({ onAddFeeStructure, onNotice, refreshKey = 0 }: { onAddFeeStructure?: () => void; onNotice?: (message: string) => void; refreshKey?: number }) {
   const [activeTab, setActiveTab] = useState<'course' | 'hostel'>('course')
@@ -12,7 +21,7 @@ export function FeeStructurePage({ onAddFeeStructure, onNotice, refreshKey = 0 }
   const [openBreakdown, setOpenBreakdown] = useState<string | null>(null)
   const [breakdownPosition, setBreakdownPosition] = useState({ top: 0, left: 0 })
   const [courses, setCourses] = useState<ApiCourse[]>([])
-  const [years, setYears] = useState<ApiAcademicYear[]>([])
+  const [years, setYears] = useState<ApiSession[]>([])
   const [semesters, setSemesters] = useState<ApiSemester[]>([])
   const [hostelRates, setHostelRates] = useState<ApiHostelRate[]>([])
   const [structures, setStructures] = useState<ApiFeeStructure[]>([])
@@ -26,12 +35,12 @@ export function FeeStructurePage({ onAddFeeStructure, onNotice, refreshKey = 0 }
     let active = true
     setLoadingOptions(true)
     setLoadError('')
-    Promise.all([api.courses(), api.academicYears(), api.semesters(), api.hostelRates()])
+    Promise.all([api.courses(), api.sessions(), api.semesters(), api.hostelRates()])
       .then(([courseRows, yearRows, semesterRows, hostelRateRows]) => {
         if (!active) return
         setCourses(courseRows); setYears(yearRows); setSemesters(semesterRows); setHostelRates(hostelRateRows)
-        const newestYear = [...yearRows].sort((left, right) => right.startDate.localeCompare(left.startDate))[0]
-        setSelectedYearId(current => yearRows.some(year => String(year.id) === current) ? current : String(newestYear?.id ?? ''))
+        const activeSessionId = currentSessionId(yearRows)
+        setSelectedYearId(current => yearRows.some(year => String(year.id) === current) ? current : String(activeSessionId ?? ''))
       })
       .catch(error => { if (active) setLoadError(error instanceof Error ? error.message : 'Could not load fee structure') })
       .finally(() => { if (active) setLoadingOptions(false) })
@@ -99,7 +108,7 @@ export function FeeStructurePage({ onAddFeeStructure, onNotice, refreshKey = 0 }
     <div className="eyebrow">ACADEMIC FEES</div>
     <div className="fee-structure-title-row"><h1 id="fee-structure-title">Fee structure</h1>{onAddFeeStructure && <button className="primary-button" onClick={onAddFeeStructure}>Add fee structure</button>}</div>
     <div className="fee-year-filter-row">
-      <label className="fee-year-filter" htmlFor="academic-year-select"><span>Academic year</span><span className="fee-year-select"><select id="academic-year-select" value={selectedYearId} onChange={event => setSelectedYearId(event.target.value)} disabled={loadingOptions || years.length === 0}><option value="" disabled>Select academic year</option>{years.map(year => <option key={year.id} value={year.id}>{year.label}</option>)}</select><Icon name="chevron" size={15}/></span></label>
+      <label className="fee-year-filter" htmlFor="session-select"><span>Session</span><span className="fee-year-select"><select id="session-select" value={selectedYearId} onChange={event => setSelectedYearId(event.target.value)} disabled={loadingOptions || years.length === 0}><option value="" disabled>Select session</option>{years.map(year => <option key={year.id} value={year.id}>{year.label}</option>)}</select><Icon name="chevron" size={15}/></span></label>
       {selectedYearId && <span className="fee-year-caption">{loadingStructures ? 'Updating fees…' : `Showing ${years.find(year => String(year.id) === selectedYearId)?.label ?? 'selected year'} fee data`}</span>}
     </div>
     {loadError && <p role="alert">Could not load live fee data: {loadError}. Check VITE_API_BASE_URL and the API server.</p>}
@@ -107,7 +116,7 @@ export function FeeStructurePage({ onAddFeeStructure, onNotice, refreshKey = 0 }
       <button role="tab" aria-selected={activeTab === 'course'} className={activeTab === 'course' ? 'active' : ''} onClick={() => setActiveTab('course')}>Fee Charge</button>
       <button role="tab" aria-selected={activeTab === 'hostel'} className={activeTab === 'hostel' ? 'active' : ''} onClick={() => setActiveTab('hostel')}>Hostel Fees</button>
     </div>
-    {activeTab === 'course' && (loadingOptions || loadingStructures ? <p className="fee-structure-note" role="status">Loading academic fee structures…</p> : !loadError && years.length === 0 ? <p className="fee-structure-note">No academic years are configured yet.</p> : <>
+    {activeTab === 'course' && (loadingOptions || loadingStructures ? <p className="fee-structure-note" role="status">Loading academic fee structures…</p> : !loadError && years.length === 0 ? <p className="fee-structure-note">No sessions are configured yet.</p> : <>
     <p className="fee-structure-intro">Fee charges by course and semester. Select an amount to see what it includes.</p>
     <div className="fee-course-tables">
       {courseGroups.map(group => <article className="panel fee-course-table-card" key={group.title}>
@@ -119,7 +128,7 @@ export function FeeStructurePage({ onAddFeeStructure, onNotice, refreshKey = 0 }
             </thead>
             <tbody>{group.courses.map(item => <tr key={item.id}><th>{item.courseName}</th>{Array.from({ length: group.years * 2 }, (_, semester) => {
               const semesterName = `semester ${semester + 1}`
-              const semesterRow = semesters.find(candidate => candidate.academicYearId === Number(selectedYearId) && candidate.name.trim().toLowerCase() === semesterName)
+              const semesterRow = semesters.find(candidate => candidate.sessionId === Number(selectedYearId) && candidate.name.trim().toLowerCase() === semesterName)
               const breakdown = academicStructures.filter(row => row.courseId === item.id && row.studyYear === Math.floor(semester / 2) + 1 && row.semesterId === semesterRow?.id).map(row => ({ label: row.component === 'ACADEMIC_FEE' ? 'Academic fee' : 'Academic caution', amount: row.amount }))
               const total = amountFor(item.id, Math.floor(semester / 2) + 1, semesterRow?.id ?? -1)
               const key = `${item.id}-${semester}`
@@ -129,8 +138,8 @@ export function FeeStructurePage({ onAddFeeStructure, onNotice, refreshKey = 0 }
           </table></div>
         </article>)}
     </div>
-    <p className="fee-structure-note">Amounts reflect the selected academic year and fee components configured in the fee management API.</p>
-    {onAddFeeStructure && <section className="panel fee-config-admin"><div className="hostel-fee-heading"><div><h2>Manage configured fee charges</h2><p>Edit amounts or delete fee structure entries. Changes affect future assessments; posted student balances stay as recorded.</p></div></div><div className="fee-table-scroll"><table className="fee-structure-table"><thead><tr><th>Course</th><th>Batch</th><th>Semester</th><th>Study year</th><th>Component</th><th>Amount</th><th>Actions</th></tr></thead><tbody>{visibleStructures.map(item => <tr key={item.id}><td>{courses.find(row => row.id === item.courseId)?.courseName ?? item.courseId}</td><td>{years.find(row => row.id === item.academicYearId)?.label ?? item.academicYearId}</td><td>{semesters.find(row => row.id === item.semesterId)?.name ?? item.semesterId}</td><td>{item.studyYear}</td><td>{item.component.replaceAll('_', ' ')}</td><td>{editingFeeId === item.id ? <input className="fee-amount-edit" type="number" min="1" step="1" value={feeAmountDraft} onChange={event => setFeeAmountDraft(event.target.value)} aria-label="New fee amount in rupees"/> : currency.format(item.amount)}</td><td><div className="fee-admin-actions">{editingFeeId === item.id ? <><button disabled={mutatingFeeId !== null} onClick={() => void saveFeeAmount(item)}>Save</button><button disabled={mutatingFeeId !== null} onClick={() => setEditingFeeId(null)}>Cancel</button></> : <><button disabled={mutatingFeeId !== null} onClick={() => { setEditingFeeId(item.id); setFeeAmountDraft(String(item.amount)) }}>Edit</button><button className="danger" disabled={mutatingFeeId !== null} onClick={() => void deleteFeeStructure(item)}>Delete</button></>}</div></td></tr>)}</tbody></table></div></section>}
+    <p className="fee-structure-note">Amounts reflect the selected session and fee components configured in the fee management API.</p>
+    {onAddFeeStructure && <section className="panel fee-config-admin"><div className="hostel-fee-heading"><div><h2>Manage configured fee charges</h2><p>Edit amounts or delete fee structure entries. Changes affect future assessments; posted student balances stay as recorded.</p></div></div><div className="fee-table-scroll"><table className="fee-structure-table"><thead><tr><th>Course</th><th>Session</th><th>Semester</th><th>Study year</th><th>Component</th><th>Amount</th><th>Actions</th></tr></thead><tbody>{visibleStructures.map(item => <tr key={item.id}><td>{courses.find(row => row.id === item.courseId)?.courseName ?? item.courseId}</td><td>{years.find(row => row.id === item.sessionId)?.label ?? item.sessionId}</td><td>{semesters.find(row => row.id === item.semesterId)?.name ?? item.semesterId}</td><td>{item.studyYear}</td><td>{item.component.replaceAll('_', ' ')}</td><td>{editingFeeId === item.id ? <input className="fee-amount-edit" type="number" min="1" step="1" value={feeAmountDraft} onChange={event => setFeeAmountDraft(event.target.value)} aria-label="New fee amount in rupees"/> : currency.format(item.amount)}</td><td><div className="fee-admin-actions">{editingFeeId === item.id ? <><button disabled={mutatingFeeId !== null} onClick={() => void saveFeeAmount(item)}>Save</button><button disabled={mutatingFeeId !== null} onClick={() => setEditingFeeId(null)}>Cancel</button></> : <><button disabled={mutatingFeeId !== null} onClick={() => { setEditingFeeId(item.id); setFeeAmountDraft(String(item.amount)) }}>Edit</button><button className="danger" disabled={mutatingFeeId !== null} onClick={() => void deleteFeeStructure(item)}>Delete</button></>}</div></td></tr>)}</tbody></table></div></section>}
     </>)}
     {activeTab === 'hostel' && <section className="panel hostel-fee-panel" aria-labelledby="hostel-fees-title">
       <div className="hostel-fee-heading"><div><h2 id="hostel-fees-title">Hostel accommodation fees</h2><p>Annual rates by air conditioning and occupancy.</p></div><span className="sample-data-note">Annual rates</span></div>
@@ -140,7 +149,7 @@ export function FeeStructurePage({ onAddFeeStructure, onNotice, refreshKey = 0 }
           <tbody>{hostelRates.filter(rate => rate.condition === condition).map(rate => <tr key={rate.id}><th>{rate.occupancy}</th><td>{currency.format(rate.annualFee)}</td></tr>)}</tbody>
         </table></div>
       </article>)}</div>
-      <p className="fee-structure-note hostel-fee-note">Hostel fees are listed per academic year.</p>
+      <p className="fee-structure-note hostel-fee-note">Hostel fees are listed per session.</p>
     </section>}
   </section>
 }

@@ -311,12 +311,16 @@ async function feeStructureTarget(db, id) {
 }
 
 async function hostelRateTarget(db, id) {
-  const rate = await db.hostelRate.findUnique({ where: { id } });
+  const rate = await db.hostelRate.findUnique({
+    where: { id },
+    include: { _count: { select: { students: true } } },
+  });
   if (!rate) throw notFound("HOSTEL_RATE_NOT_FOUND");
   return {
     entity: "hostelRate",
     id,
     label: `${rate.condition} · ${rate.occupancy}`,
+    studentCount: rate._count.students,
     spec: {},
   };
 }
@@ -359,8 +363,33 @@ module.exports = {
   deleteStudent: (id) => commit((tx) => studentTarget(tx, id)),
   previewFeeStructure: simplePreview(feeStructureTarget),
   deleteFeeStructure: simpleDelete("feeStructure", feeStructureTarget),
-  previewHostelRate: simplePreview(hostelRateTarget),
-  deleteHostelRate: simpleDelete("hostelRate", hostelRateTarget),
+  previewHostelRate: async (id) => {
+    const target = await hostelRateTarget(prisma, id);
+    const selected = target.studentCount;
+    return {
+      ...emptyImpact(),
+      entity: target.entity,
+      id: target.id,
+      label: target.label,
+      clears: selected
+        ? [{
+            key: "hostelSeats",
+            count: selected,
+            message: `${selected} ${selected === 1 ? "student has" : "students have"} selected this rate. Delete is blocked until those selections change.`,
+          }]
+        : [],
+    };
+  },
+  deleteHostelRate: async (id) => {
+    const target = await hostelRateTarget(prisma, id);
+    if (target.studentCount > 0) {
+      throw conflict("HOSTEL_RATE_IN_USE", [
+        { path: "id", message: "Students have selected this hostel rate." },
+      ]);
+    }
+    await prisma.hostelRate.delete({ where: { id } });
+    return { deleted: true };
+  },
   previewReminder: simplePreview(reminderTarget),
   deleteReminder: simpleDelete("reminder", reminderTarget),
 };

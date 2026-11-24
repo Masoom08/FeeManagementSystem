@@ -63,7 +63,7 @@ function listSemesters() {
   return prisma.semester.findMany({ orderBy: { id: "asc" } });
 }
 
-async function createFeeStructure(data) {
+async function assertFeeStructure(data) {
   const [course, year, semester] = await Promise.all([
     prisma.course.findUnique({ where: { id: data.courseId } }),
     prisma.academicYear.findUnique({ where: { id: data.academicYearId } }),
@@ -72,14 +72,40 @@ async function createFeeStructure(data) {
   if (!course) {
     throw notFound("COURSE_NOT_FOUND");
   }
+  if (data.studyYear > course.durationYears) {
+    throw badRequest("STUDY_YEAR_OUT_OF_RANGE", [{
+      path: "studyYear",
+      message: `studyYear must be between 1 and ${course.durationYears}`,
+    }]);
+  }
   if (!year) {
     throw notFound("ACADEMIC_YEAR_NOT_FOUND");
   }
   if (!semester || semester.academicYearId !== data.academicYearId) {
     throw notFound("SEMESTER_NOT_FOUND");
   }
+}
+
+async function createFeeStructure(data) {
+  await assertFeeStructure(data);
   try {
     return await prisma.feeStructure.create({ data });
+  } catch (err) {
+    if (err.code === "P2002") {
+      throw conflict("DUPLICATE_FEE_STRUCTURE");
+    }
+    throw err;
+  }
+}
+
+async function updateFeeStructure(id, data) {
+  const existing = await prisma.feeStructure.findUnique({ where: { id } });
+  if (!existing) {
+    throw notFound();
+  }
+  await assertFeeStructure(data);
+  try {
+    return await prisma.feeStructure.update({ where: { id }, data });
   } catch (err) {
     if (err.code === "P2002") {
       throw conflict("DUPLICATE_FEE_STRUCTURE");
@@ -94,6 +120,59 @@ function listFeeStructures() {
 
 function listHostelRates() {
   return prisma.hostelRate.findMany({ orderBy: [{ condition: "asc" }, { annualFee: "desc" }] });
+}
+
+async function listHostelSelections() {
+  const students = await prisma.student.findMany({
+    where: { hostelRateId: { not: null } },
+    orderBy: [{ name: "asc" }, { registrationNumber: "asc" }],
+    include: {
+      course: { select: { courseName: true } },
+      academicYear: { select: { label: true } },
+      hostelRate: true,
+      feeAccounts: {
+        where: { product: "HOSTEL" },
+        include: {
+          ledgerEntries: {
+            where: { entryType: "ASSESSMENT", component: "HOSTEL_FEE" },
+            select: { id: true },
+          },
+        },
+      },
+    },
+  });
+  return students.filter((student) => student.hostelRate).map((student) => ({
+    studentId: student.id,
+    name: student.name,
+    registrationNumber: student.registrationNumber,
+    course: student.course.courseName,
+    batch: student.academicYear.label,
+    condition: student.hostelRate.condition,
+    occupancy: student.hostelRate.occupancy,
+    annualFee: student.hostelRate.annualFee,
+    billed: student.feeAccounts.some((account) => account.ledgerEntries.length > 0),
+  }));
+}
+
+async function updateHostelRate(id, data) {
+  const existing = await prisma.hostelRate.findUnique({ where: { id } });
+  if (!existing) {
+    throw notFound();
+  }
+  const taken = await prisma.hostelRate.findFirst({
+    where: { condition: data.condition, occupancy: data.occupancy, id: { not: id } },
+  });
+  if (taken) {
+    throw conflict("DUPLICATE_HOSTEL_RATE");
+  }
+  try {
+    return await prisma.hostelRate.update({ where: { id }, data });
+  } catch (err) {
+    if (err.code === "P2002") {
+      throw conflict("DUPLICATE_HOSTEL_RATE");
+    }
+    throw err;
+  }
 }
 
 async function getAccount(id) {
@@ -345,8 +424,11 @@ module.exports = {
   createSemester,
   listSemesters,
   createFeeStructure,
+  updateFeeStructure,
   listFeeStructures,
   listHostelRates,
+  listHostelSelections,
+  updateHostelRate,
   getAccount,
   runFines,
   waiveFine,

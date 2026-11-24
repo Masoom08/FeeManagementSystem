@@ -6,7 +6,8 @@ export type SemesterFee = {
   paid: number
   status: FeeStatus
   paymentDate: string | null
-  dueDate: string
+  dueDate: string | null
+  billed: boolean
   receiptNo?: string
 }
 
@@ -16,6 +17,7 @@ export type PaymentReceipt = {
   paymentDate: string
   semesters: number[]
   method: string
+  product?: 'ACADEMIC' | 'HOSTEL'
 }
 
 export type Student = {
@@ -23,7 +25,7 @@ export type Student = {
   registrationNo: string
   phone: string
   course: string
-  batch: number
+  batch: string
   year: number
 }
 

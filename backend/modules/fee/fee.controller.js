@@ -26,9 +26,19 @@ const createFeeStructure = asyncRoute(async (req, res) => {
   res.status(201).json({ success: true, data: structure });
 });
 
+const updateFeeStructure = asyncRoute(async (req, res) => {
+  const structure = await feeService.updateFeeStructure(req.params.id, req.body);
+  res.status(200).json({ success: true, data: structure });
+});
+
 const listFeeStructures = asyncRoute(async (req, res) => {
   const structures = await feeService.listFeeStructures();
   res.status(200).json({ success: true, data: structures });
+});
+
+const listHostelSelections = asyncRoute(async (req, res) => {
+  const selections = await feeService.listHostelSelections();
+  res.status(200).json({ success: true, data: selections });
 });
 
 const listHostelRates = asyncRoute(async (req, res) => {
@@ -91,6 +101,11 @@ const deleteFeeStructure = asyncRoute(async (req, res) => {
   res.status(200).json({ success: true, data: result });
 });
 
+const updateHostelRate = asyncRoute(async (req, res) => {
+  const rate = await feeService.updateHostelRate(req.params.id, req.body);
+  res.status(200).json({ success: true, data: rate });
+});
+
 const previewHostelRateDelete = asyncRoute(async (req, res) => {
   const impact = await feeService.previewHostelRateDelete(req.params.id);
   res.status(200).json({ success: true, data: impact });
@@ -107,8 +122,11 @@ module.exports = {
   createSemester,
   listSemesters,
   createFeeStructure,
+  updateFeeStructure,
   listFeeStructures,
   listHostelRates,
+  listHostelSelections,
+  updateHostelRate,
   getAccount,
   runFines,
   waiveFine,

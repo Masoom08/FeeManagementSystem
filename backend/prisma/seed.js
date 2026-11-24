@@ -90,6 +90,7 @@ async function seedCourses() {
         courseCode: definition.code,
         courseName: definition.name,
         affiliation: definition.affiliation,
+        durationYears: definition.years,
         lateFeePerDay: definition.name.toUpperCase().includes("MBA") ? 15 : 5,
       },
     });
@@ -117,13 +118,13 @@ async function seedSemesters(years) {
   const result = new Map();
   for (const session of sessions) {
     const year = years.get(session.label);
-    const odd = await prisma.semester.create({
-      data: { academicYearId: year.id, name: "Odd", dueDate: oddDue(session.startYear), graceDays: 0 },
+    const first = await prisma.semester.create({
+      data: { academicYearId: year.id, name: "Ist Semester", dueDate: oddDue(session.startYear), graceDays: 0 },
     });
-    const even = await prisma.semester.create({
-      data: { academicYearId: year.id, name: "Even", dueDate: evenDue(session.startYear), graceDays: 0 },
+    const second = await prisma.semester.create({
+      data: { academicYearId: year.id, name: "IInd Semester", dueDate: evenDue(session.startYear), graceDays: 0 },
     });
-    result.set(session.label, { odd, even });
+    result.set(session.label, { first, second });
   }
   return result;
 }
@@ -134,7 +135,7 @@ async function seedStructures(courses, years, semesters) {
     const terms = semesters.get(session.label);
     for (const course of courses.values()) {
       for (let studyYear = 1; studyYear <= course.years; studyYear += 1) {
-        for (const semester of [terms.odd, terms.even]) {
+        for (const semester of [terms.first, terms.second]) {
           await prisma.feeStructure.create({
             data: {
               courseId: course.id,
@@ -199,7 +200,7 @@ async function assessTerm(account, semester, course, registrationNumber, pay) {
       amount: course.fee,
       idempotencyKey: key,
       reference: key,
-      receiptNo: `RCPT-${registrationNumber}-${semester.academicYearId}-${semester.name.slice(0, 1)}`,
+      receiptNo: `RCPT-${registrationNumber}-${semester.academicYearId}-${semester.name.startsWith("IInd") ? "II" : "I"}`,
       actedBy: seedActor,
       paidOn,
       allocations: { create: [{ feeAccountId: account.id, bucket: "DUES", amount: course.fee }] },
@@ -236,7 +237,7 @@ async function seedStudents(courses, years, semesters) {
       const studyYear = active ? currentStart - intake + 1 : course.years;
       const latestStart = active ? currentStart : finalStart;
       const latest = years.get(sessionLabel(latestStart));
-      const admission = semesters.get(sessionLabel(intake)).odd;
+      const admission = semesters.get(sessionLabel(intake)).first;
       for (let seat = 1; seat <= studentsPerIntake; seat += 1) {
         const registrationNumber = `ICM${intake}${course.code}${String(seat).padStart(2, "0")}`;
         const name = registrationNumber === "ICM2026BAK01" ? "Masoom Singh" : studentNames[nameIndex++];
@@ -269,14 +270,14 @@ async function seedStudents(courses, years, semesters) {
             data: { studentId: student.id, product: "ACADEMIC", academicYearId: years.get(label).id },
           });
           const terms = semesters.get(label);
-          const currentOdd = startYear === currentStart;
-          await assessTerm(account, terms.odd, course, registrationNumber, !currentOdd);
-          if (!currentOdd) await assessTerm(account, terms.even, course, registrationNumber, true);
-          if (currentOdd && withFine) {
+          const currentFirst = startYear === currentStart;
+          await assessTerm(account, terms.first, course, registrationNumber, !currentFirst);
+          if (!currentFirst) await assessTerm(account, terms.second, course, registrationNumber, true);
+          if (currentFirst && withFine) {
             await prisma.ledgerEntry.create({
               data: {
                 feeAccountId: account.id,
-                semesterId: terms.odd.id,
+                semesterId: terms.first.id,
                 bucket: "DUES",
                 entryType: "FINE",
                 direction: "INCREASE",

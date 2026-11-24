@@ -1,5 +1,6 @@
 const { z } = require("zod");
 const { idParams, isoDate } = require("../../lib/ids");
+const { SEMESTER_NAMES } = require("../../lib/terms");
 
 const registrationNumber = z
   .string({ required_error: "registrationNumber is required", invalid_type_error: "registrationNumber must be a string" })
@@ -17,8 +18,7 @@ const phone = (field) =>
   z
     .string({ required_error: `${field} is required`, invalid_type_error: `${field} must be a string` })
     .trim()
-    .min(8, `${field} must be at least 8 characters`)
-    .max(20, `${field} must be at most 20 characters`);
+    .regex(/^[1-9]\d{9}$/, `${field} must be a 10-digit number`);
 
 const email = z
   .string({ required_error: "email is required", invalid_type_error: "email must be a string" })
@@ -49,8 +49,20 @@ const createStudentBody = z
 
 const updateStudentBody = z
   .object({
-    enrolmentNumber: z.string().trim().min(1, "enrolmentNumber is required").max(40).optional(),
+    registrationNumber: registrationNumber.optional(),
+    name: personName.optional(),
+    whatsappNumber: phone("whatsappNumber").optional(),
+    phoneNumber: phone("phoneNumber").optional(),
+    email: email.optional(),
+    fatherName: z.string().trim().min(1, "fatherName is required").max(120).optional(),
+    branch: z.string().trim().min(1, "branch is required").max(80).optional(),
+    courseId: z.number({ invalid_type_error: "courseId must be an integer" }).int().positive().optional(),
+    academicYearId: z.number({ invalid_type_error: "academicYearId must be an integer" }).int().positive().optional(),
+    semesterId: z.number({ invalid_type_error: "semesterId must be an integer" }).int().positive().optional(),
+    admissionType: admissionType.optional(),
     isHosteller: z.boolean({ invalid_type_error: "isHosteller must be a boolean" }).optional(),
+    studyYear: z.number().int().positive("studyYear must be a positive integer").optional(),
+    enrolmentNumber: z.string().trim().min(1, "enrolmentNumber is required").max(40).optional(),
     status: z.enum(["ACTIVE", "LEFT", "COMPLETED"], {
       errorMap: () => ({ message: "status must be ACTIVE, LEFT, or COMPLETED" }),
     }).optional(),
@@ -82,7 +94,9 @@ const importRowSchema = z
     isHosteller: z.boolean({ invalid_type_error: "isHosteller must be a boolean" }),
     studyYear: z.number().int().positive("studyYear must be a positive integer"),
     academicYearLabel: z.string().trim().min(1, "academicYearLabel is required").max(20),
-    semesterName: z.string().trim().min(1, "semesterName is required").max(40),
+    semesterName: z.enum(SEMESTER_NAMES, {
+      errorMap: () => ({ message: "semesterName must be Ist Semester or IInd Semester" }),
+    }),
   })
   .strict();
 

@@ -58,33 +58,46 @@ async function assessStudent(tx, student, products) {
     const account = await ensureAccount(tx, student, product);
     const rows = applicable.filter((row) => productFor(row.component) === product);
     for (const row of rows) {
-      const existing = await tx.ledgerEntry.findFirst({
-        where: {
-          feeAccountId: account.id,
-          semesterId: student.admissionSemesterId,
-          entryType: "ASSESSMENT",
-          component: row.component,
-        },
-      });
-      if (existing) {
+      if (row.component === "HOSTEL_FEE" && student.hostelRateId) {
         continue;
       }
-      await tx.ledgerEntry.create({
-        data: {
-          feeAccountId: account.id,
-          semesterId: student.admissionSemesterId,
-          bucket: DEPOSIT_COMPONENTS.has(row.component) ? "DEPOSIT" : "DUES",
-          entryType: "ASSESSMENT",
-          direction: "INCREASE",
-          amount: row.amount,
-          component: row.component,
-          effectiveDate: todayUTC(),
-          actedBy: "system",
-          reason: "Fee assessment",
-        },
-      });
+      await postAssessment(tx, account, student, row.component, row.amount);
+    }
+    if (product === "HOSTEL" && student.hostelRateId) {
+      const rate = await tx.hostelRate.findUnique({ where: { id: student.hostelRateId } });
+      if (rate) {
+        await postAssessment(tx, account, student, "HOSTEL_FEE", rate.annualFee);
+      }
     }
   }
+}
+
+async function postAssessment(tx, account, student, component, amount) {
+  const existing = await tx.ledgerEntry.findFirst({
+    where: {
+      feeAccountId: account.id,
+      semesterId: student.admissionSemesterId,
+      entryType: "ASSESSMENT",
+      component,
+    },
+  });
+  if (existing) {
+    return;
+  }
+  await tx.ledgerEntry.create({
+    data: {
+      feeAccountId: account.id,
+      semesterId: student.admissionSemesterId,
+      bucket: DEPOSIT_COMPONENTS.has(component) ? "DEPOSIT" : "DUES",
+      entryType: "ASSESSMENT",
+      direction: "INCREASE",
+      amount,
+      component,
+      effectiveDate: todayUTC(),
+      actedBy: "system",
+      reason: "Fee assessment",
+    },
+  });
 }
 
 function componentFor(product, bucket) {

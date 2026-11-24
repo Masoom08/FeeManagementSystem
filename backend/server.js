@@ -36,6 +36,7 @@ app.get("/", (req, res) => {
         "/api/student-auth/request-otp",
         "/api/student-auth/verify-otp",
         "/api/student-auth/me",
+        "/api/student-auth/hostel-seat",
         "/api/student-auth/logout",
         "/api/student-auth/payments",
         "/api/student-auth/payments/:orderId/mock-success",

@@ -18,12 +18,15 @@ semesters.delete("/:id", requireSuperAdmin, validate({ params: schemas.idParams 
 
 const feeStructures = express.Router();
 feeStructures.post("/", requireSuperAdmin, validate({ body: schemas.createFeeStructureBody }), controller.createFeeStructure);
+feeStructures.patch("/:id", requireSuperAdmin, validate({ params: schemas.idParams, body: schemas.createFeeStructureBody }), controller.updateFeeStructure);
 feeStructures.get("/", controller.listFeeStructures);
 feeStructures.get("/:id/delete-preview", requireSuperAdmin, validate({ params: schemas.idParams }), controller.previewFeeStructureDelete);
 feeStructures.delete("/:id", requireSuperAdmin, validate({ params: schemas.idParams }), controller.deleteFeeStructure);
 
 const hostelRates = express.Router();
 hostelRates.get("/", controller.listHostelRates);
+hostelRates.get("/selections", controller.listHostelSelections);
+hostelRates.patch("/:id", requireSuperAdmin, validate({ params: schemas.idParams, body: schemas.updateHostelRateBody }), controller.updateHostelRate);
 hostelRates.get("/:id/delete-preview", requireSuperAdmin, validate({ params: schemas.idParams }), controller.previewHostelRateDelete);
 hostelRates.delete("/:id", requireSuperAdmin, validate({ params: schemas.idParams }), controller.deleteHostelRate);
 

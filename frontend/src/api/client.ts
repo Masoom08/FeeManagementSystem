@@ -1,16 +1,17 @@
-const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:3000/api').replace(/\/$/, '')
+const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL).replace(/\/$/, '')
 export const AUTH_TOKEN_STORAGE_KEY = 'iccmrt-superadmin-token'
 
-export type ApiCourse = { id: number; courseCode: string; courseName: string; affiliation: string; lateFeePerDay: number; active: boolean }
+export type ApiCourse = { id: number; courseCode: string; courseName: string; affiliation: string; durationYears: number; lateFeePerDay: number; active: boolean }
 export type ApiAcademicYear = { id: number; label: string; startDate: string; endDate: string }
 export type ApiSemester = { id: number; academicYearId: number; name: string; dueDate: string; graceDays: number; fineEndDate?: string | null }
 export type ApiFeeStructure = { id: number; courseId: number; academicYearId: number; semesterId: number; component: 'ACADEMIC_FEE' | 'ACADEMIC_CAUTION' | 'HOSTEL_FEE' | 'HOSTEL_SECURITY'; studyYear: number; amount: number }
 export type ApiHostelRate = { id: number; condition: string; occupancy: string; annualFee: number }
+export type ApiHostelSelection = { studentId: number; name: string; registrationNumber: string; course: string; batch: string; condition: string; occupancy: string; annualFee: number; billed: boolean }
 export type ApiReminder = { studentId: number; registrationNumber: string; name: string; duesOutstanding: number; reminders: Array<{ id: number; channel: string; sentAt: string; actedBy: string }> }
 export type ApiReminderSendResult = { sent: Array<{ studentId: number; channel: string; reminderId: number }>; failed: Array<{ studentId: number; channel: string; reason: string }> }
 
 export type ApiStudentCourse = Pick<ApiCourse, 'id' | 'courseCode' | 'courseName'> & { lateFeePerDay: number }
-export type ApiStudentSummary = { id: number; registrationNumber: string; enrolmentNumber: string | null; name: string; phoneNumber: string; whatsappNumber: string; email: string; fatherName: string; branch: string; courseId: number; academicYearId: number; admissionSemesterId: number; studyYear: number; status: string; isHosteller: boolean; duesOutstanding: number; course: ApiStudentCourse; academicYear: ApiAcademicYear; admissionSemester: ApiSemester; accounts: ApiFeeAccount[] }
+export type ApiStudentSummary = { id: number; registrationNumber: string; enrolmentNumber: string | null; name: string; phoneNumber: string; whatsappNumber: string; email: string; fatherName: string; branch: string; courseId: number; academicYearId: number; admissionSemesterId: number; admissionType: 'DIRECT' | 'COUNSELLING'; studyYear: number; status: string; isHosteller: boolean; duesOutstanding: number; course: ApiStudentCourse; academicYear: ApiAcademicYear; admissionSemester: ApiSemester; accounts: ApiFeeAccount[] }
 export type ApiLedgerEntry = { id: number; semesterId: number | null; bucket: 'DUES' | 'DEPOSIT'; entryType: string; direction: 'INCREASE' | 'DECREASE'; amount: number; component: string; effectiveDate: string; actedBy?: string; reason?: string | null; relatedEntryId?: number | null }
 export type ApiFeeAccount = { id: number; product: 'ACADEMIC' | 'HOSTEL'; academicYearId: number; duesOutstanding: number; depositHeld?: number; depositOutstanding?: number; lines: ApiLedgerEntry[] }
 export type ApiImportBatch = { id: number; status: string; fileName: string; rows: Array<{ rowNumber: number; valid: boolean; errors: Array<{ path: string; message: string }> | null }> }
@@ -74,6 +75,7 @@ export const api = {
   semesters: () => request<ApiSemester[]>('/semesters'),
   feeStructures: () => request<ApiFeeStructure[]>('/fee-structures'),
   hostelRates: () => request<ApiHostelRate[]>('/hostel-rates'),
+  hostelSelections: () => request<ApiHostelSelection[]>('/hostel-rates/selections'),
   students: (query = '') => request<ApiStudentSummary[]>(`/students${query ? `?q=${encodeURIComponent(query)}` : ''}`),
   student: (id: number) => request<ApiStudent>(`/students/${id}`),
   reminders: () => request<ApiReminder[]>('/reminders'),
@@ -86,7 +88,7 @@ export const api = {
   verifyPayment: (id: number, payload: { actedBy: string; paidOn?: string }) => request<{ id: number; receiptNo: string | null; status: string }>(`/payments/${id}/verify`, {
     method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload),
   }),
-  updateStudent: (id: number, payload: { enrolmentNumber?: string; isHosteller?: boolean; status?: 'ACTIVE' | 'LEFT' | 'COMPLETED'; leftOn?: string }) => request<ApiStudentSummary>(`/students/${id}`, {
+  updateStudent: (id: number, payload: { registrationNumber?: string; name?: string; whatsappNumber?: string; phoneNumber?: string; email?: string; fatherName?: string; branch?: string; courseId?: number; academicYearId?: number; semesterId?: number; admissionType?: 'DIRECT' | 'COUNSELLING'; isHosteller?: boolean; studyYear?: number; enrolmentNumber?: string; status?: 'ACTIVE' | 'LEFT' | 'COMPLETED'; leftOn?: string }) => request<ApiStudentSummary>(`/students/${id}`, {
     method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload),
   }),
   previewImport: (file: File) => {
@@ -123,7 +125,7 @@ export const api = {
     return response.blob()
   },
   receipt: (paymentId: number) => request<ApiReceipt>(`/receipts/${paymentId}`),
-  createCourse: (payload: { courseCode: string; courseName: string; affiliation: 'AKTU' | 'LU'; lateFeePerDay: number }) => request<ApiCourse>('/courses', {
+  createCourse: (payload: { courseCode: string; courseName: string; affiliation: 'AKTU' | 'LU'; durationYears: number; lateFeePerDay: number }) => request<ApiCourse>('/courses', {
     method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload),
   }),
   createStudent: (payload: { registrationNumber: string; name: string; whatsappNumber: string; phoneNumber: string; email: string; fatherName: string; branch: string; courseId: number; academicYearId: number; semesterId: number; admissionType: 'DIRECT' | 'COUNSELLING'; isHosteller: boolean; studyYear: number }) => request<ApiStudentSummary>('/students', {
@@ -137,6 +139,12 @@ export const api = {
   }),
   createFeeStructure: (payload: { courseId: number; academicYearId: number; semesterId: number; component: ApiFeeStructure['component']; studyYear: number; amount: number }) => request<ApiFeeStructure>('/fee-structures', {
     method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload),
+  }),
+  updateFeeStructure: (id: number, payload: { courseId: number; academicYearId: number; semesterId: number; component: ApiFeeStructure['component']; studyYear: number; amount: number }) => request<ApiFeeStructure>(`/fee-structures/${id}`, {
+    method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload),
+  }),
+  updateHostelRate: (id: number, payload: { condition: string; occupancy: string; annualFee: number }) => request<ApiHostelRate>(`/hostel-rates/${id}`, {
+    method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload),
   }),
   previewCourseDelete: (id: number) => request<DeleteImpact>(`/courses/${id}/delete-preview`),
   deleteCourse: (id: number) => request<{ deleted: boolean }>(`/courses/${id}`, { method: 'DELETE' }),

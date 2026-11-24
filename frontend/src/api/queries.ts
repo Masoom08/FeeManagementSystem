@@ -11,6 +11,7 @@ export const queryKeys = {
   semesters: ['semesters'] as const,
   feeStructures: ['fee-structures'] as const,
   hostelRates: ['hostel-rates'] as const,
+  hostelSelections: ['hostel-selections'] as const,
   students: ['students'] as const,
   reminders: ['reminders'] as const,
   reports: ['reports'] as const,
@@ -34,6 +35,10 @@ export function useFeeStructures() {
 
 export function useHostelRates() {
   return useQuery({ queryKey: queryKeys.hostelRates, queryFn: api.hostelRates })
+}
+
+export function useHostelSelections() {
+  return useQuery({ queryKey: queryKeys.hostelSelections, queryFn: api.hostelSelections })
 }
 
 export function useStudents() {

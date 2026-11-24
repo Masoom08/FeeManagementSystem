@@ -78,6 +78,13 @@ async function createStudent(data) {
   if (!course) {
     throw notFound("COURSE_NOT_FOUND");
   }
+  const studyYear = data.studyYear ?? 1;
+  if (studyYear > course.durationYears) {
+    throw badRequest("STUDY_YEAR_OUT_OF_RANGE", [{
+      path: "studyYear",
+      message: `studyYear must be between 1 and ${course.durationYears}`,
+    }]);
+  }
   await assertYearAndSemester(data.academicYearId, data.semesterId);
   try {
     const created = await prisma.transaction(async (tx) => {
@@ -95,7 +102,7 @@ async function createStudent(data) {
           admissionSemesterId: data.semesterId,
           admissionType: data.admissionType,
           isHosteller: data.isHosteller ?? false,
-          studyYear: data.studyYear ?? 1,
+          studyYear,
         },
       });
       await assessStudent(tx, student, student.isHosteller ? ["ACADEMIC", "HOSTEL"] : ["ACADEMIC"]);
@@ -150,17 +157,54 @@ async function updateStudent(id, data) {
       throw conflict("DUPLICATE_ENROLMENT_NUMBER");
     }
   }
+  if (data.registrationNumber && data.registrationNumber !== existing.registrationNumber) {
+    const taken = await prisma.student.findFirst({
+      where: { registrationNumber: data.registrationNumber, id: { not: id } },
+    });
+    if (taken) {
+      throw conflict("DUPLICATE_REGISTRATION_NUMBER");
+    }
+  }
+
+  const courseId = data.courseId ?? existing.courseId;
+  const studyYear = data.studyYear ?? existing.studyYear;
+  if (data.courseId != null || data.studyYear != null) {
+    const course = await prisma.course.findUnique({ where: { id: courseId } });
+    if (!course) {
+      throw notFound("COURSE_NOT_FOUND");
+    }
+    if (studyYear > course.durationYears) {
+      throw badRequest("STUDY_YEAR_OUT_OF_RANGE", [{
+        path: "studyYear",
+        message: `studyYear must be between 1 and ${course.durationYears}`,
+      }]);
+    }
+  }
+  if (data.academicYearId != null || data.semesterId != null) {
+    await assertYearAndSemester(data.academicYearId ?? existing.academicYearId, data.semesterId ?? existing.admissionSemesterId);
+  }
 
   const patch = {};
-  if (data.enrolmentNumber) {
-    patch.enrolmentNumber = data.enrolmentNumber;
-  }
-  if (data.isHosteller != null) {
+  if (data.registrationNumber) patch.registrationNumber = data.registrationNumber;
+  if (data.name) patch.name = data.name;
+  if (data.whatsappNumber) patch.whatsappNumber = data.whatsappNumber;
+  if (data.phoneNumber) patch.phoneNumber = data.phoneNumber;
+  if (data.email) patch.email = data.email;
+  if (data.fatherName) patch.fatherName = data.fatherName;
+  if (data.branch) patch.branch = data.branch;
+  if (data.courseId != null) patch.courseId = data.courseId;
+  if (data.academicYearId != null) patch.academicYearId = data.academicYearId;
+  if (data.semesterId != null) patch.admissionSemesterId = data.semesterId;
+  if (data.admissionType) patch.admissionType = data.admissionType;
+  if (data.studyYear != null) patch.studyYear = data.studyYear;
+  if (data.enrolmentNumber) patch.enrolmentNumber = data.enrolmentNumber;
+  if (data.isHosteller === false) {
+    patch.isHosteller = false;
+    patch.hostelRateId = null;
+  } else if (data.isHosteller != null) {
     patch.isHosteller = data.isHosteller;
   }
-  if (data.status) {
-    patch.status = data.status;
-  }
+  if (data.status) patch.status = data.status;
   if (data.status === "LEFT") {
     patch.leftOn = data.leftOn ? parseISODate(data.leftOn) : todayUTC();
   }
@@ -301,6 +345,8 @@ async function previewImport(file) {
     ]);
     if (!course) {
       errors.push({ path: "courseCode", message: "course not found" });
+    } else if (value.studyYear > course.durationYears) {
+      errors.push({ path: "studyYear", message: `studyYear must be between 1 and ${course.durationYears}` });
     }
     if (!year) {
       errors.push({ path: "academicYearLabel", message: "academic year not found" });

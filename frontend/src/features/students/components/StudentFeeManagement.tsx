@@ -2,8 +2,9 @@ import { useMemo, useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { DeleteConfirmDialog, type DeleteTarget } from '../../../components/DeleteConfirmDialog'
 import { Icon } from '../../../components/ui/AppIcon'
-import { actedBy, api, type ApiImportBatch, type ApiReceipt } from '../../../api/client'
+import { actedBy, api, type ApiImportBatch, type ApiReceipt, type ApiStudentSummary } from '../../../api/client'
 import { queryKeys, useAcademicYears, useCourses, useReminders, useSemesters, useStudents } from '../../../api/queries'
+import { courseDurationYears, programSemesterNumber, semesterNumbers, semestersForYear, studyYearForSemester, termForSemester } from '../../academic/labels'
 import { toFeeRecord, type StudentFeeRecord, type StudentFeeStatus } from '../studentFees'
 import { InvoiceTemplate } from '../../payments/components/InvoiceTemplate'
 import './StudentFeeManagement.css'
@@ -85,10 +86,22 @@ export function StudentFeeManagement({ onNotice, view, onAddStudent, canManage =
   const [receipt, setReceipt] = useState<ApiReceipt | null>(null)
   const [savingReminders, setSavingReminders] = useState(false)
   const [expandedReminder, setExpandedReminder] = useState<string | null>(null)
-  const [editStudent, setEditStudent] = useState<FeeRow | null>(null)
+  const [editStudent, setEditStudent] = useState<ApiStudentSummary | null>(null)
+  const [registrationNumber, setRegistrationNumber] = useState('')
+  const [studentName, setStudentName] = useState('')
+  const [phoneNumber, setPhoneNumber] = useState('')
+  const [whatsappNumber, setWhatsappNumber] = useState('')
+  const [email, setEmail] = useState('')
+  const [fatherName, setFatherName] = useState('')
+  const [branch, setBranch] = useState('')
+  const [editCourseId, setEditCourseId] = useState('')
+  const [editYearId, setEditYearId] = useState('')
+  const [programSemester, setProgramSemester] = useState('')
+  const [admissionType, setAdmissionType] = useState<'DIRECT' | 'COUNSELLING'>('DIRECT')
   const [enrolmentNumber, setEnrolmentNumber] = useState('')
   const [studentStatus, setStudentStatus] = useState<'ACTIVE' | 'LEFT' | 'COMPLETED'>('ACTIVE')
   const [hosteller, setHosteller] = useState(false)
+  const [editError, setEditError] = useState('')
   const [refundStudent, setRefundStudent] = useState<FeeRow | null>(null)
   const [refundAmount, setRefundAmount] = useState('')
   const [refundReason, setRefundReason] = useState('')
@@ -173,20 +186,64 @@ export function StudentFeeManagement({ onNotice, view, onAddStudent, canManage =
     }
   }
 
+  const openStudentEditor = (row: FeeRow) => {
+    const source = (studentsQuery.data ?? []).find(item => item.id === row.apiStudentId)
+    if (!source) return
+    setEditStudent(source)
+    setEditError('')
+    setRegistrationNumber(source.registrationNumber)
+    setStudentName(source.name)
+    setPhoneNumber(source.phoneNumber)
+    setWhatsappNumber(source.whatsappNumber)
+    setEmail(source.email)
+    setFatherName(source.fatherName)
+    setBranch(source.branch)
+    setEditCourseId(String(source.courseId))
+    setEditYearId(String(source.academicYearId))
+    setProgramSemester(String(programSemesterNumber(source.studyYear, source.admissionSemester?.name ?? '')))
+    setAdmissionType(source.admissionType === 'COUNSELLING' ? 'COUNSELLING' : 'DIRECT')
+    setEnrolmentNumber(source.enrolmentNumber ?? '')
+    setStudentStatus(source.status === 'LEFT' || source.status === 'COMPLETED' ? source.status : 'ACTIVE')
+    setHosteller(source.isHosteller)
+  }
+
   const saveStudentRecord = async () => {
     if (!editStudent) return
+    const mobileNumber = /^[1-9]\d{9}$/
+    if (!mobileNumber.test(phoneNumber) || !mobileNumber.test(whatsappNumber)) {
+      setEditError('Phone number and WhatsApp number must each be a 10-digit number.')
+      return
+    }
+    const placement = semestersForYear(semestersQuery.data ?? [], Number(editYearId)).find(item => item.name === termForSemester(Number(programSemester)))
+    if (!placement) {
+      setEditError('Add the semester due dates for this batch before saving.')
+      return
+    }
     setSavingRecord(true)
+    setEditError('')
     try {
-      await api.updateStudent(editStudent.apiStudentId, {
-        ...(enrolmentNumber.trim() ? { enrolmentNumber: enrolmentNumber.trim() } : {}),
+      await api.updateStudent(editStudent.id, {
+        registrationNumber: registrationNumber.trim(),
+        name: studentName.trim(),
+        phoneNumber,
+        whatsappNumber,
+        email: email.trim(),
+        fatherName: fatherName.trim(),
+        branch: branch.trim(),
+        courseId: Number(editCourseId),
+        academicYearId: Number(editYearId),
+        semesterId: placement.id,
+        studyYear: studyYearForSemester(Number(programSemester)),
+        admissionType,
         isHosteller: hosteller,
+        ...(enrolmentNumber.trim() ? { enrolmentNumber: enrolmentNumber.trim() } : {}),
         status: studentStatus,
       })
       setEditStudent(null)
       await refreshShared()
-      onNotice(`Student record updated for ${editStudent.name}.`)
+      onNotice(`Student record updated for ${studentName.trim()}.`)
     } catch (error) {
-      onNotice(error instanceof Error ? `Could not update student: ${error.message}` : 'Could not update student.')
+      setEditError(error instanceof Error ? error.message : 'Could not update student.')
     } finally {
       setSavingRecord(false)
     }
@@ -269,7 +326,7 @@ export function StudentFeeManagement({ onNotice, view, onAddStudent, canManage =
       <div className="student-export-row"><div className="export-caption download-caption"><Icon name="download" size={18}/><span>Download an Excel-compatible list</span></div><div className="export-buttons"><button className="export-all" onClick={() => exportStudents(courseRows, 'All')}><span>All</span><small>{courseRows.length}</small></button><button className="export-paid" onClick={() => exportStudents(courseRows.filter(student => student.status === 'Paid'), 'Paid')}><span>Paid</span><small>{paidCount}</small></button><button className="export-unpaid" onClick={() => exportStudents(unpaidRows, 'Unpaid')}><span>Unpaid</span><small>{unpaidRows.length}</small></button></div></div>
 
       <div className="student-table-wrap"><table className="student-fee-table"><thead><tr><th>REGISTRATION NO.</th><th>STUDENT</th><th>BATCH</th><th>COURSE</th><th>YEAR</th><th>PERIOD (YEARS)</th><th>SEMESTER</th><th>SEMESTER FEE</th><th>PAID</th><th>PAYMENT DATE</th><th>BALANCE</th><th>STATUS</th><th>ACTION</th></tr></thead><tbody>
-        {visibleRows.map(student => <tr key={`${student.registrationNo}-${student.semesterId}`}><td>{student.registrationNo}</td><td><div className="student-cell"><span><strong>{student.name}</strong><small>{student.phone}{student.enrolmentNumber ? ` · ${student.enrolmentNumber}` : ''}{student.hostelOutstanding ? ` · Hostel due ${currency.format(student.hostelOutstanding)}` : ''}</small></span></div></td><td>{student.batch}</td><td>{student.course}</td><td>Year {student.studyYear}</td><td>{student.startDate.slice(-4)} - {student.endDate.slice(-4)}</td><td>{student.semester}</td><td className="amount-cell">{currency.format(student.feeDue)}</td><td>{currency.format(student.amountPaid)}</td><td>{student.paymentDate ? student.paymentDate.slice(0, 10) : '-'}</td><td className={student.balance > 0 ? 'balance-due' : 'amount-cell'}>{currency.format(student.balance)}</td><td><span className={`status status-${student.status.toLowerCase()}`}><i/>{student.status}</span></td><td><div className="student-row-actions">{student.balance > 0 || student.hostelOutstanding > 0 ? <button className="cash-payment-button" onClick={() => openPayment(student)}>Record payment</button> : <span className="cash-paid-label">Paid in full</span>}{canManage && <button className="cash-payment-button" onClick={() => { setEditStudent(student); setEnrolmentNumber(student.enrolmentNumber ?? ''); setStudentStatus(student.studentStatus as 'ACTIVE' | 'LEFT' | 'COMPLETED'); setHosteller(student.isHosteller) }}>Update</button>}{canManage && student.depositHeld > 0 && <button className="cash-payment-button" onClick={() => { setRefundStudent(student); setRefundAmount(String(student.depositHeld)); setRefundReason(''); setDeductionAmount(''); setDeductionReason('') }}>Deposit</button>}{canManage && <button type="button" className="row-delete-button" onClick={() => setDeleteTarget({ kind: 'student', id: student.apiStudentId })}>Delete</button>}</div></td></tr>)}
+        {visibleRows.map(student => <tr key={`${student.registrationNo}-${student.semesterId}`}><td>{student.registrationNo}</td><td><div className="student-cell"><span><strong>{student.name}</strong><small>{student.phone}{student.enrolmentNumber ? ` · ${student.enrolmentNumber}` : ''}{student.hostelOutstanding ? ` · Hostel due ${currency.format(student.hostelOutstanding)}` : ''}</small></span></div></td><td>{student.batch}</td><td>{student.course}</td><td>Year {student.studyYear}</td><td>{student.startDate.slice(-4)} - {student.endDate.slice(-4)}</td><td>{student.semester}</td><td className="amount-cell">{currency.format(student.feeDue)}</td><td>{currency.format(student.amountPaid)}</td><td>{student.paymentDate ? student.paymentDate.slice(0, 10) : '-'}</td><td className={student.balance > 0 ? 'balance-due' : 'amount-cell'}>{currency.format(student.balance)}</td><td><span className={`status status-${student.status.toLowerCase()}`}><i/>{student.status}</span></td><td><div className="student-row-actions">{student.balance > 0 || student.hostelOutstanding > 0 ? <button className="cash-payment-button" onClick={() => openPayment(student)}>Record payment</button> : <span className="cash-paid-label">Paid in full</span>}{canManage && <button className="cash-payment-button" onClick={() => openStudentEditor(student)}>Edit</button>}{canManage && student.depositHeld > 0 && <button className="cash-payment-button" onClick={() => { setRefundStudent(student); setRefundAmount(String(student.depositHeld)); setRefundReason(''); setDeductionAmount(''); setDeductionReason('') }}>Deposit</button>}{canManage && <button type="button" className="row-delete-button" onClick={() => setDeleteTarget({ kind: 'student', id: student.apiStudentId })}>Delete</button>}</div></td></tr>)}
       </tbody></table>{visibleRows.length === 0 && <div className="student-empty">{loadingStudents ? 'Loading students…' : 'No students match the selected filters.'}</div>}</div>
       <div className="student-list-footer"><span>Showing <strong>{visibleRows.length}</strong> of <strong>{courseRows.length}</strong> matching students</span><span>Fee due date: <strong>{visibleRows[0]?.dueDate ? visibleRows[0].dueDate.slice(0, 10) : 'varies by semester'}</strong></span></div>
     </div>
@@ -281,7 +338,7 @@ export function StudentFeeManagement({ onNotice, view, onAddStudent, canManage =
 
     {smsOpen && <div className="modal-backdrop" role="presentation" onMouseDown={event => { if (event.target === event.currentTarget) setSmsOpen(false) }}><section className="sms-modal" role="dialog" aria-modal="true" aria-labelledby="sms-title"><div className="sms-modal-icon"><Icon name="bell" size={23}/></div><button className="modal-close" aria-label="Close" onClick={() => setSmsOpen(false)}>×</button><h2 id="sms-title">Remind unpaid students</h2><p className="sms-count">{unpaidRows.length} students · {course === 'All courses' ? 'all courses' : course} · {semester === 'All semesters' ? 'all semesters' : semester}</p><div className="sms-preview"><span>MESSAGE PREVIEW</span><p>{reminderMessage}</p></div><p className="sms-prototype-note">Sending asks the API to deliver this message by SMS and WhatsApp. A channel is recorded only when its provider accepts it.</p><div className="sms-modal-actions"><button className="secondary-button" onClick={() => setSmsOpen(false)}>Cancel</button><button className="primary-button" onClick={() => void recordReminderBatch()} disabled={savingReminders}>{savingReminders ? 'Sending…' : 'Send reminders'}</button></div></section></div>}
     {cashStudent && <div className="modal-backdrop" role="presentation" onMouseDown={event => { if (event.target === event.currentTarget) setCashStudent(null) }}><section className="sms-modal cash-payment-modal" role="dialog" aria-modal="true" aria-labelledby="cash-payment-title"><div className="sms-modal-icon cash-modal-icon"><Icon name="wallet" size={23}/></div><button className="modal-close" aria-label="Close" onClick={() => setCashStudent(null)}>×</button><h2 id="cash-payment-title">Record payment</h2><p className="sms-count">{cashStudent.name} · {cashStudent.registrationNo} · {cashStudent.semester}</p><div className="cash-balance-note">Remaining balance: <strong>{currency.format(paymentMax)}</strong></div><div className="cash-payment-fields"><label><span>Account</span><select value={cashAccount} onChange={event => { const next = event.target.value as 'ACADEMIC' | 'HOSTEL'; setCashAccount(next); setCashAmount(String(next === 'HOSTEL' ? cashStudent.hostelOutstanding : cashStudent.balance)) }}><option value="ACADEMIC">Academic dues</option>{cashStudent.hostelAccountId > 0 && <option value="HOSTEL">Hostel dues</option>}</select></label><label><span>Amount received (INR)</span><input type="number" min="1" max={paymentMax} step="1" value={cashAmount} onChange={event => setCashAmount(event.target.value)} required/></label><label><span>Payment date</span><input type="date" value={cashDate} onChange={event => setCashDate(event.target.value)} required/></label><label><span>Payment method</span><select value={cashMethod} onChange={event => setCashMethod(event.target.value as 'CASH' | 'CHALLAN')}><option value="CASH">Cash</option><option value="CHALLAN">Challan</option></select></label>{cashMethod === 'CHALLAN' && <label><span>Challan reference</span><input value={cashReference} onChange={event => setCashReference(event.target.value)} required/></label>}</div><p className="cash-payment-note">{cashMethod === 'CHALLAN' ? 'Saving records the challan and verifies it, which updates the fee ledger.' : 'Saving this entry updates the student’s paid amount, balance, and fee status.'}</p><div className="sms-modal-actions"><button className="secondary-button" onClick={() => setCashStudent(null)}>Cancel</button><button className="primary-button" disabled={!Number(cashAmount) || Number(cashAmount) <= 0 || Number(cashAmount) > paymentMax || !cashDate || savingPayment || (cashMethod === 'CHALLAN' && !cashReference.trim())} onClick={() => void saveCashPayment()}>{savingPayment ? 'Saving…' : 'Save payment'}</button></div></section></div>}
-    {editStudent && <div className="modal-backdrop" role="presentation" onMouseDown={event => { if (event.target === event.currentTarget) setEditStudent(null) }}><section className="sms-modal" role="dialog" aria-modal="true" aria-labelledby="student-update-title"><button className="modal-close" aria-label="Close" onClick={() => setEditStudent(null)}>×</button><h2 id="student-update-title">Update student</h2><p className="sms-count">{editStudent.name} · {editStudent.registrationNo}</p><div className="cash-payment-fields"><label><span>Enrolment number</span><input value={enrolmentNumber} onChange={event => setEnrolmentNumber(event.target.value)} placeholder="Added after Year 1"/></label><label><span>Status</span><select value={studentStatus} onChange={event => setStudentStatus(event.target.value as 'ACTIVE' | 'LEFT' | 'COMPLETED')}><option value="ACTIVE">Active</option><option value="LEFT">Left</option><option value="COMPLETED">Completed</option></select></label><label className="admin-form-checkbox"><input type="checkbox" checked={hosteller} onChange={event => setHosteller(event.target.checked)}/><span>Hosteller</span></label></div><div className="sms-modal-actions"><button className="secondary-button" onClick={() => setEditStudent(null)}>Cancel</button><button className="primary-button" disabled={savingRecord} onClick={() => void saveStudentRecord()}>{savingRecord ? 'Saving…' : 'Save record'}</button></div></section></div>}
+    {editStudent && <div className="modal-backdrop" role="presentation" onMouseDown={event => { if (event.target === event.currentTarget && !savingRecord) setEditStudent(null) }}><section className="sms-modal student-edit-modal" role="dialog" aria-modal="true" aria-labelledby="student-update-title"><button className="modal-close" aria-label="Close" onClick={() => setEditStudent(null)} disabled={savingRecord}>×</button><h2 id="student-update-title">Edit student</h2><p className="sms-count">{editStudent.name} · {editStudent.registrationNumber}</p>{editError && <p className="student-edit-error" role="alert">{editError}</p>}<div className="cash-payment-fields"><label><span>Registration number</span><input value={registrationNumber} maxLength={40} onChange={event => setRegistrationNumber(event.target.value)} required/></label><label><span>Student name</span><input value={studentName} maxLength={120} onChange={event => setStudentName(event.target.value)} required/></label><label><span>Phone number</span><input value={phoneNumber} inputMode="numeric" maxLength={10} onChange={event => setPhoneNumber(event.target.value.replace(/\D/g, '').slice(0, 10))} required/></label><label><span>WhatsApp number</span><input value={whatsappNumber} inputMode="numeric" maxLength={10} onChange={event => setWhatsappNumber(event.target.value.replace(/\D/g, '').slice(0, 10))} required/></label><label><span>Email</span><input type="email" value={email} maxLength={120} onChange={event => setEmail(event.target.value)} required/></label><label><span>Father / guardian name</span><input value={fatherName} maxLength={120} onChange={event => setFatherName(event.target.value)} required/></label><label><span>Branch</span><input value={branch} maxLength={80} onChange={event => setBranch(event.target.value)} required/></label><label><span>Course</span><select value={editCourseId} onChange={event => { setEditCourseId(event.target.value); setProgramSemester('') }}>{(coursesQuery.data ?? []).map(item => <option key={item.id} value={item.id}>{item.courseName} · {courseDurationYears(item) * 2} semesters</option>)}</select></label><label><span>Batch</span><select value={editYearId} onChange={event => setEditYearId(event.target.value)}>{(yearsQuery.data ?? []).map(item => <option key={item.id} value={item.id}>{item.label}</option>)}</select></label><label><span>Semester</span><select value={programSemester} onChange={event => setProgramSemester(event.target.value)}>{semesterNumbers(courseDurationYears((coursesQuery.data ?? []).find(item => item.id === Number(editCourseId)) ?? {})).map(number => <option key={number} value={number}>Semester {number}</option>)}</select></label><label><span>Admission type</span><select value={admissionType} onChange={event => setAdmissionType(event.target.value as 'DIRECT' | 'COUNSELLING')}><option value="DIRECT">Direct</option><option value="COUNSELLING">Counselling</option></select></label><label><span>Enrolment number</span><input value={enrolmentNumber} maxLength={40} onChange={event => setEnrolmentNumber(event.target.value)} placeholder="Added after Year 1"/></label><label><span>Status</span><select value={studentStatus} onChange={event => setStudentStatus(event.target.value as 'ACTIVE' | 'LEFT' | 'COMPLETED')}><option value="ACTIVE">Active</option><option value="LEFT">Left</option><option value="COMPLETED">Completed</option></select></label><label className="admin-form-checkbox"><input type="checkbox" checked={hosteller} onChange={event => setHosteller(event.target.checked)}/><span>Hosteller</span></label></div><p className="cash-payment-note">Changing the course, batch, or semester updates the student profile. Fees already billed stay as recorded.</p><div className="sms-modal-actions"><button className="secondary-button" onClick={() => setEditStudent(null)} disabled={savingRecord}>Cancel</button><button className="primary-button" disabled={savingRecord || !registrationNumber.trim() || !studentName.trim() || !email.trim() || !fatherName.trim() || !branch.trim() || !programSemester} onClick={() => void saveStudentRecord()}>{savingRecord ? 'Saving…' : 'Save record'}</button></div></section></div>}
     {refundStudent && <div className="modal-backdrop" role="presentation" onMouseDown={event => { if (event.target === event.currentTarget) setRefundStudent(null) }}><section className="sms-modal" role="dialog" aria-modal="true" aria-labelledby="deposit-title"><button className="modal-close" aria-label="Close" onClick={() => setRefundStudent(null)}>×</button><h2 id="deposit-title">Caution or security deposit</h2><p className="sms-count">{refundStudent.name} · held {currency.format(refundStudent.depositHeld)}</p><div className="cash-payment-fields"><label><span>Amount (INR)</span><input type="number" min="1" max={refundStudent.depositHeld} value={refundAmount} onChange={event => setRefundAmount(event.target.value)}/></label><label><span>Reason</span><input value={refundReason} onChange={event => setRefundReason(event.target.value)} required/></label><label><span>Deduction amount (optional)</span><input type="number" min="0" value={deductionAmount} onChange={event => setDeductionAmount(event.target.value)}/></label><label><span>Deduction reason</span><input value={deductionReason} onChange={event => setDeductionReason(event.target.value)}/></label></div><div className="sms-modal-actions"><button className="secondary-button" onClick={() => setRefundStudent(null)}>Cancel</button><button className="secondary-button" disabled={savingRecord || !refundReason.trim() || !Number(refundAmount)} onClick={() => void saveRefund(true)}>Adjust to fees</button><button className="primary-button" disabled={savingRecord || !refundReason.trim() || !Number(refundAmount) || (Number(deductionAmount) > 0 && !deductionReason.trim())} onClick={() => void saveRefund(false)}>{savingRecord ? 'Saving…' : 'Refund'}</button></div></section></div>}
     {importBatch && <div className="modal-backdrop" role="presentation" onMouseDown={event => { if (event.target === event.currentTarget) setImportBatch(null) }}><section className="sms-modal" role="dialog" aria-modal="true" aria-labelledby="import-title"><button className="modal-close" aria-label="Close" onClick={() => setImportBatch(null)}>×</button><h2 id="import-title">Excel preview</h2><p className="sms-count">{importBatch.fileName} · {importBatch.rows.filter(row => row.valid).length} valid · {importBatch.rows.filter(row => !row.valid).length} invalid</p><div className="sms-preview"><span>ROW CHECK</span>{importBatch.rows.map(row => <p key={row.rowNumber}>Row {row.rowNumber}: {row.valid ? 'valid' : (row.errors ?? []).map(error => error.message).join('; ')}</p>)}</div><div className="sms-modal-actions"><button className="secondary-button" onClick={() => setImportBatch(null)}>Close</button><button className="primary-button" disabled={savingRecord || importBatch.rows.some(row => !row.valid)} onClick={() => void commitUpload()}>{savingRecord ? 'Importing…' : 'Import valid file'}</button></div></section></div>}
     {receipt && <InvoiceTemplate receipt={receipt} onClose={() => setReceipt(null)}/>}

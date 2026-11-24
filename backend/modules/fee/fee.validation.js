@@ -1,8 +1,11 @@
 const { z } = require("zod");
 const { actedBy, idParams, isoDate, positiveAmount } = require("../../lib/ids");
+const { SEMESTER_NAMES } = require("../../lib/terms");
 
 const label = z.string().trim().min(1, "label is required").max(20, "label must be at most 20 characters");
-const name = z.string().trim().min(1, "name is required").max(40, "name must be at most 40 characters");
+const name = z.enum(SEMESTER_NAMES, {
+  errorMap: () => ({ message: "name must be Ist Semester or IInd Semester" }),
+});
 
 const createAcademicYearBody = z
   .object({
@@ -32,6 +35,16 @@ const createFeeStructureBody = z
     }),
     studyYear: z.number().int().positive("studyYear must be a positive integer"),
     amount: positiveAmount("amount"),
+  })
+  .strict();
+
+const updateHostelRateBody = z
+  .object({
+    condition: z.enum(["AC", "Non-AC"], {
+      errorMap: () => ({ message: "condition must be AC or Non-AC" }),
+    }),
+    occupancy: z.string().trim().min(1, "occupancy is required").max(30, "occupancy must be at most 30 characters"),
+    annualFee: positiveAmount("annualFee"),
   })
   .strict();
 
@@ -76,6 +89,7 @@ module.exports = {
   createAcademicYearBody,
   createSemesterBody,
   createFeeStructureBody,
+  updateHostelRateBody,
   runFinesBody,
   waiveFineBody,
   refundDepositBody,

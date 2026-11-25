@@ -36,11 +36,6 @@ const updateSemester = asyncRoute(async (req, res) => {
   res.status(200).json({ success: true, data: semester });
 });
 
-const deleteSemester = asyncRoute(async (req, res) => {
-  const result = await feeService.deleteSemester(Number(req.params.id));
-  res.status(200).json({ success: true, data: result });
-});
-
 const createFeeStructure = asyncRoute(async (req, res) => {
   const structure = await feeService.createFeeStructure(req.body);
   res.status(201).json({ success: true, data: structure });
@@ -54,11 +49,6 @@ const listFeeStructures = asyncRoute(async (req, res) => {
 const updateFeeStructure = asyncRoute(async (req, res) => {
   const structure = await feeService.updateFeeStructure(Number(req.params.id), req.body);
   res.status(200).json({ success: true, data: structure });
-});
-
-const deleteFeeStructure = asyncRoute(async (req, res) => {
-  const result = await feeService.deleteFeeStructure(Number(req.params.id));
-  res.status(200).json({ success: true, data: result });
 });
 
 const listHostelRates = asyncRoute(async (req, res) => {
@@ -149,7 +139,6 @@ module.exports = {
   createSemester,
   listSemesters,
   updateSemester,
-  deleteSemester,
   createFeeStructure,
   listFeeStructures,
   updateFeeStructure,
@@ -167,7 +156,6 @@ module.exports = {
   previewSemesterDelete,
   deleteSemester,
   previewFeeStructureDelete,
-  deleteFeeStructure,
   previewHostelRateDelete,
   deleteHostelRate,
 };

@@ -37,32 +37,6 @@ sessions.delete(
   controller.deleteSession
 );
 
-// Academic Years
-const academicYears = express.Router();
-
-academicYears.post(
-  "/",
-  requireSuperAdmin,
-  validate({ body: schemas.createAcademicYearBody }),
-  controller.createAcademicYear
-);
-
-academicYears.get("/", controller.listAcademicYears);
-
-academicYears.get(
-  "/:id/delete-preview",
-  requireSuperAdmin,
-  validate({ params: schemas.idParams }),
-  controller.previewAcademicYearDelete
-);
-
-academicYears.delete(
-  "/:id",
-  requireSuperAdmin,
-  validate({ params: schemas.idParams }),
-  controller.deleteAcademicYear
-);
-
 // Semesters
 const semesters = express.Router();
 
@@ -218,7 +192,6 @@ fees.post(
 
 module.exports = {
   sessions,
-  academicYears,
   semesters,
   feeStructures,
   hostelRates,

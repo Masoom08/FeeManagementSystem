@@ -2,12 +2,13 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { Alert, Keyboard, KeyboardAvoidingView, ScrollView, StyleSheet, Text, View } from 'react-native'
 import type { ScrollViewInstance } from 'react-native'
 import { DashboardHeader } from '../../components/DashboardHeader'
+import { PrimaryButton } from '../../components/PrimaryButton'
 import { DashboardTabs, type DashboardTab } from '../../components/DashboardTabs'
 import { PaymentOptionsTable } from '../../components/PaymentOptionsTable'
 import { ReceiptHistoryTable } from '../../components/ReceiptHistoryTable'
 import { StudentSidebar } from '../../components/StudentSidebar'
 import { SummaryMetricCard } from '../../components/SummaryMetricCard'
-import { completeMockStudentPayment, createStudentPayment, loadStudentProfile, loadStudentReceipts } from '../../services/studentApi'
+import { completeMockStudentPayment, createStudentPayment, loadStudentProfile, loadStudentReceipts, type StudentPaymentStatus } from '../../services/studentApi'
 import { colors } from '../../theme/colors'
 import type { PaymentReceipt, SemesterFee, Student } from '../../types/fee'
 import { formatCurrency } from '../../utils/formatCurrency'
@@ -22,12 +23,16 @@ export function StudentDashboardScreen({ token, student, onSignOut }: StudentDas
   const [receipts, setReceipts] = useState<PaymentReceipt[]>([])
   const [customAmount, setCustomAmount] = useState('')
   const [isCustomAmountFocused, setIsCustomAmountFocused] = useState(false)
+  const [pendingOrder, setPendingOrder] = useState<{ orderId: string; amount: number } | null>(null)
+  const [paymentNotice, setPaymentNotice] = useState('')
+  const [accountPayments, setAccountPayments] = useState<StudentPaymentStatus[]>([])
+  const [hostelOutstanding, setHostelOutstanding] = useState(0)
   const dashboardScrollRef = useRef<ScrollViewInstance | null>(null)
 
   useEffect(() => {
     let active = true
     Promise.all([loadStudentProfile(token), loadStudentReceipts(token)]).then(([profile, history]) => {
-      if (active) { setFees(profile.fees); setReceipts(history) }
+      if (active) { setFees(profile.fees); setReceipts(history); setAccountPayments(profile.payments); setHostelOutstanding(profile.hostelOutstanding) }
     }).catch(error => Alert.alert('Could not load account', error instanceof Error ? error.message : 'Please try again.'))
     return () => { active = false }
   }, [token])
@@ -54,7 +59,15 @@ export function StudentDashboardScreen({ token, student, onSignOut }: StudentDas
       const [profile, history] = await Promise.all([loadStudentProfile(token), loadStudentReceipts(token)])
       setFees(profile.fees)
       setReceipts(history)
-      Alert.alert(payment.status === 'SUCCESS' ? 'Mock payment successful' : 'Mock payment failed', payment.status === 'SUCCESS' ? `Receipt ${payment.receiptNo} is ready to download.` : 'The failed payment was saved. No receipt was issued.')
+      setAccountPayments(profile.payments)
+      setHostelOutstanding(profile.hostelOutstanding)
+      setPendingOrder(null)
+      const notice = payment.status === 'SUCCESS'
+        ? `Receipt ${payment.receiptNo} is ready to download.`
+        : 'The failed payment was saved. No receipt was issued.'
+      setPaymentNotice(notice)
+      if (payment.status === 'SUCCESS') setActiveTab('receipts')
+      Alert.alert(payment.status === 'SUCCESS' ? 'Mock payment successful' : 'Mock payment failed', notice)
     } catch (error) {
       Alert.alert('Could not update payment', error instanceof Error ? error.message : 'Please try again.')
     } finally {
@@ -75,6 +88,8 @@ export function StudentDashboardScreen({ token, student, onSignOut }: StudentDas
     setIsPaying(true)
     try {
       const result = await createStudentPayment(token, amount, `MOBILE-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`)
+      setPendingOrder({ orderId: result.orderId, amount })
+      setPaymentNotice('')
       Alert.alert('Mock payment started', `Order ${result.orderId} is saved as pending. Choose a simulator result.`, [
         { text: 'Simulate success', onPress: () => { void simulatePaymentResult(result.orderId, 'success') } },
         { text: 'Simulate failure', style: 'destructive', onPress: () => { void simulatePaymentResult(result.orderId, 'failure') } },
@@ -130,6 +145,15 @@ export function StudentDashboardScreen({ token, student, onSignOut }: StudentDas
             onPayFull={() => startPayment('full')}
             onPayCustom={() => startPayment('custom')}
           />
+          {pendingOrder ? <View style={styles.simulator}>
+            <Text style={styles.simulatorTitle}>Order {pendingOrder.orderId} is pending</Text>
+            <Text style={styles.simulatorCopy}>Choose a simulator result for {formatCurrency(pendingOrder.amount)}.</Text>
+            <PrimaryButton label="Simulate success" onPress={() => { void simulatePaymentResult(pendingOrder.orderId, 'success') }} />
+            <PrimaryButton label="Simulate failure" onPress={() => { void simulatePaymentResult(pendingOrder.orderId, 'failure') }} />
+          </View> : null}
+          {hostelOutstanding > 0 ? <Text style={styles.paymentNotice}>Hostel balance {formatCurrency(hostelOutstanding)} is tracked separately. The accounts office records hostel payments.</Text> : null}
+          {accountPayments.filter(payment => payment.status !== 'SUCCESS').map(payment => <Text key={`${payment.reference}-${payment.status}`} style={styles.paymentNotice}>{payment.status === 'FAILED' ? 'Failed' : 'Pending'} {payment.method} payment of {formatCurrency(payment.amount)}{payment.reference ? ` · ${payment.reference}` : ''}</Text>)}
+          {paymentNotice ? <Text style={styles.paymentNotice}>{paymentNotice}</Text> : null}
         </> : <>
           <View style={styles.sectionHeading}>
             <View><Text style={styles.sectionTitle}>Receipts</Text><Text style={styles.sectionSubtitle}>Payment history and downloadable PDF receipts</Text></View>
@@ -157,5 +181,9 @@ const styles = StyleSheet.create({
   securityNote: { flexDirection: 'row', gap: 10, padding: 12, marginTop: 15, borderRadius: 10, backgroundColor: '#eaf1f8' },
   securityIcon: { color: '#396b98', fontSize: 19, fontWeight: '700' },
   securityText: { flex: 1, color: '#62758a', fontSize: 12, lineHeight: 18 },
+  simulator: { gap: 10, marginTop: 14, padding: 14, borderRadius: 10, borderWidth: 1, borderColor: '#d5e3f2', backgroundColor: '#ffffff' },
+  simulatorTitle: { color: colors.navy, fontSize: 15, fontWeight: '800' },
+  simulatorCopy: { color: '#62758a', fontSize: 12, lineHeight: 18 },
+  paymentNotice: { marginTop: 12, color: colors.navy, fontSize: 13, fontWeight: '700' },
   footer: { textAlign: 'center', color: '#9aa4b0', fontSize: 11, lineHeight: 17, marginTop: 18 },
 })

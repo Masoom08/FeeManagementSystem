@@ -26,6 +26,7 @@ router.post("/imports/preview", requireSuperAdmin, uploadSpreadsheet, controller
 router.post("/imports/:id/commit", requireSuperAdmin, validate({ params: schemas.idParams }), controller.commitImport);
 router.post("/", requireSuperAdmin, validate({ body: schemas.createStudentBody }), controller.createStudent);
 router.get("/", validate({ query: schemas.searchQuery }), controller.searchStudents);
+router.get("/:id/delete-preview", requireSuperAdmin, validate({ params: schemas.idParams }), controller.previewStudentDelete);
 router.get("/:id", validate({ params: schemas.idParams }), controller.getStudent);
 router.patch("/:id", requireSuperAdmin, validate({ params: schemas.idParams, body: schemas.updateStudentBody }), controller.updateStudent);
 router.delete("/:id", requireSuperAdmin, validate({ params: schemas.idParams }), controller.deleteStudent);

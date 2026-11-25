@@ -1,4 +1,5 @@
 const prisma = require("../../lib/prisma");
+const cascadeDelete = require("../../lib/cascadeDelete");
 const { badRequest, httpError, notFound } = require("../../lib/errors");
 const { balances } = require("../../lib/balance");
 
@@ -154,7 +155,17 @@ async function listReminders(unpaidOnly) {
   return rows;
 }
 
+function previewReminderDelete(id) {
+  return cascadeDelete.previewReminder(id);
+}
+
+function deleteReminder(id) {
+  return cascadeDelete.deleteReminder(id);
+}
+
 module.exports = {
   sendReminders,
   listReminders,
+  previewReminderDelete,
+  deleteReminder,
 };

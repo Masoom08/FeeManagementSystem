@@ -1,4 +1,6 @@
+
 const prisma = require("../../lib/prisma");
+const cascadeDelete = require("../../lib/cascadeDelete");
 
 function duplicateCourseError() {
   const error = new Error("DUPLICATE_COURSE_CODE");
@@ -33,14 +35,17 @@ function listCourses() {
 
 async function getCourse(id) {
   const course = await prisma.course.findUnique({ where: { id } });
+
   if (!course) {
     throw notFoundError();
   }
+
   return course;
 }
 
 async function updateCourse(id, data) {
   await getCourse(id);
+
   try {
     return await prisma.course.update({
       where: { id },
@@ -54,15 +59,41 @@ async function updateCourse(id, data) {
   }
 }
 
+// Preview related records before deleting a course
+function previewCourseDelete(id) {
+  return cascadeDelete.previewCourse(id);
+}
+
+// Deactivate a course without deleting associated records
 async function deactivateCourse(id) {
   const course = await prisma.course.findUnique({
     where: { id },
-    include: { _count: { select: { students: true, feeStructures: true } } },
+    include: {
+      _count: {
+        select: {
+          students: true,
+          feeStructures: true,
+        },
+      },
+    },
   });
-  if (!course) throw notFoundError();
-  if (course._count.students || course._count.feeStructures) return updateCourse(id, { active: false });
+
+  if (!course) {
+    throw notFoundError();
+  }
+
+  if (course._count.students || course._count.feeStructures) {
+    return updateCourse(id, { active: false });
+  }
+
   await prisma.course.delete({ where: { id } });
+
   return { id, deleted: true };
+}
+
+// Permanently delete a course using cascade deletion
+function deleteCourse(id) {
+  return cascadeDelete.deleteCourse(id);
 }
 
 module.exports = {
@@ -70,5 +101,7 @@ module.exports = {
   listCourses,
   getCourse,
   updateCourse,
+  previewCourseDelete,
   deactivateCourse,
+  deleteCourse,
 };

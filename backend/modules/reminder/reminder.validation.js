@@ -1,5 +1,5 @@
 const { z } = require("zod");
-const { actedBy } = require("../../lib/ids");
+const { actedBy, idParams } = require("../../lib/ids");
 
 const createReminderBody = z
   .object({
@@ -19,4 +19,5 @@ const listQuery = z
 module.exports = {
   createReminderBody,
   listQuery,
+  idParams: idParams(),
 };

@@ -11,7 +11,19 @@ const listReminders = asyncRoute(async (req, res) => {
   res.status(200).json({ success: true, data: reminders });
 });
 
+const previewReminderDelete = asyncRoute(async (req, res) => {
+  const impact = await reminderService.previewReminderDelete(req.params.id);
+  res.status(200).json({ success: true, data: impact });
+});
+
+const deleteReminder = asyncRoute(async (req, res) => {
+  const result = await reminderService.deleteReminder(req.params.id);
+  res.status(200).json({ success: true, data: result });
+});
+
 module.exports = {
   sendReminders,
   listReminders,
+  previewReminderDelete,
+  deleteReminder,
 };

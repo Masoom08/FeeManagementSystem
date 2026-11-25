@@ -1,4 +1,5 @@
 const prisma = require("../../lib/prisma");
+const cascadeDelete = require("../../lib/cascadeDelete");
 const { badRequest, conflict, notFound } = require("../../lib/errors");
 const { addDays, diffDays, formatISODate, parseISODate, todayUTC } = require("../../lib/dates");
 const { balances, postedFineTotal, principalOutstanding } = require("../../lib/balance");
@@ -501,6 +502,38 @@ async function adjustDeposit(accountId, data) {
   return { lines, account: await getAccount(account.id) };
 }
 
+function previewAcademicYearDelete(id) {
+  return cascadeDelete.previewAcademicYear(id);
+}
+
+function deleteAcademicYear(id) {
+  return cascadeDelete.deleteAcademicYear(id);
+}
+
+function previewSemesterDelete(id) {
+  return cascadeDelete.previewSemester(id);
+}
+
+function deleteSemester(id) {
+  return cascadeDelete.deleteSemester(id);
+}
+
+function previewFeeStructureDelete(id) {
+  return cascadeDelete.previewFeeStructure(id);
+}
+
+function deleteFeeStructure(id) {
+  return cascadeDelete.deleteFeeStructure(id);
+}
+
+function previewHostelRateDelete(id) {
+  return cascadeDelete.previewHostelRate(id);
+}
+
+function deleteHostelRate(id) {
+  return cascadeDelete.deleteHostelRate(id);
+}
+
 module.exports = {
   createSession,
   listSessions,
@@ -522,4 +555,12 @@ module.exports = {
   waiveLateFeeForStudent,
   refundDeposit,
   adjustDeposit,
+  previewAcademicYearDelete,
+  deleteAcademicYear,
+  previewSemesterDelete,
+  deleteSemester,
+  previewFeeStructureDelete,
+  deleteFeeStructure,
+  previewHostelRateDelete,
+  deleteHostelRate,
 };

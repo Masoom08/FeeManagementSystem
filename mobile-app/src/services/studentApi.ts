@@ -44,9 +44,11 @@ export async function verifyStudentOtp(phoneNumber: string, otp: string) {
   }
 }
 
+export type StudentPaymentStatus = { reference: string | null; status: 'PENDING' | 'SUCCESS' | 'FAILED'; amount: number; method: string; receiptNo: string | null }
+
 export async function loadStudentProfile(token: string) {
-  const result = await request<{ student: Student; fees: (Omit<SemesterFee, 'dueDate' | 'paymentDate'> & { dueDate: string; paymentDate: string | null })[] }>('/student-auth/me', token)
-  return { ...result, fees: result.fees.map(fee => ({ ...fee, dueDate: new Date(fee.dueDate).toLocaleDateString('en-IN'), paymentDate: fee.paymentDate ? new Date(fee.paymentDate).toLocaleDateString('en-IN') : null })) }
+  const result = await request<{ student: Student; hostelOutstanding?: number; payments?: StudentPaymentStatus[]; fees: (Omit<SemesterFee, 'dueDate' | 'paymentDate'> & { dueDate: string; paymentDate: string | null })[] }>('/student-auth/me', token)
+  return { ...result, payments: result.payments ?? [], hostelOutstanding: result.hostelOutstanding ?? 0, fees: result.fees.map(fee => ({ ...fee, dueDate: new Date(fee.dueDate).toLocaleDateString('en-IN'), paymentDate: fee.paymentDate ? new Date(fee.paymentDate).toLocaleDateString('en-IN') : null })) }
 }
 
 export async function loadStudentReceipts(token: string) {

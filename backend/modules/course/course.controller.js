@@ -1,3 +1,4 @@
+
 const courseService = require("./course.service");
 
 async function createCourse(req, res, next) {
@@ -36,10 +37,28 @@ async function updateCourse(req, res, next) {
   }
 }
 
-async function deleteCourse(req, res, next) {
+async function previewCourseDelete(req, res, next) {
+  try {
+    const impact = await courseService.previewCourseDelete(req.params.id);
+    res.status(200).json({ success: true, data: impact });
+  } catch (err) {
+    next(err);
+  }
+}
+
+async function deactivateCourse(req, res, next) {
   try {
     const course = await courseService.deactivateCourse(req.params.id);
     res.status(200).json({ success: true, data: course });
+  } catch (err) {
+    next(err);
+  }
+}
+
+async function deleteCourse(req, res, next) {
+  try {
+    const result = await courseService.deleteCourse(req.params.id);
+    res.status(200).json({ success: true, data: result });
   } catch (err) {
     next(err);
   }
@@ -50,5 +69,7 @@ module.exports = {
   listCourses,
   getCourse,
   updateCourse,
+  previewCourseDelete,
+  deactivateCourse,
   deleteCourse,
 };

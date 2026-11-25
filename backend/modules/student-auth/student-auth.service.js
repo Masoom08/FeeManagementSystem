@@ -183,12 +183,23 @@ async function getProfile(studentId) {
       semesters.set(number, row);
     }
   }
+  const payments = await prisma.paymentAttempt.findMany({
+    where: { allocations: { some: { feeAccount: { studentId } } } },
+    orderBy: { id: "desc" },
+    take: 8,
+    select: { reference: true, status: true, amount: true, method: true, receiptNo: true },
+  });
+  const hostelOutstanding = student.feeAccounts
+    .filter((account) => account.product === "HOSTEL")
+    .reduce((sum, account) => sum + balances(account.ledgerEntries).duesOutstanding, 0);
   return {
     student: { id: student.id, name: student.name, registrationNo: student.registrationNumber, phone: student.phoneNumber, course: student.course.courseName, batch: student.batch.label, session: student.session.label, year: student.studyYear },
     fees: [...semesters.values()].sort((a, b) => a.semester - b.semester).map((row) => ({
       ...row,
       status: row.paid >= row.fee && row.fee > 0 ? "Paid" : row.dueDate > new Date() ? "Upcoming" : "Due",
     })),
+    hostelOutstanding,
+    payments,
     accounts: student.feeAccounts.map((account) => ({ id: account.id, product: account.product, ...balances(account.ledgerEntries) })),
   };
 }

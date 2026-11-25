@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "nodemon server.js",
     "start": "node server.js",
+    "build": "prisma generate",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "node -r ./config/database-url.js ./node_modules/prisma/build/index.js migrate dev",
     "prisma:seed": "node -r ./config/database-url.js prisma/seed.js",
@@ -31,5 +32,11 @@
     "nodemon": "^3.1.14",
     "prisma": "^6.19.3",
     "zod": "^3.25.76"
+  },
+  "allowScripts": {
+    "@prisma/client@6.19.3": true,
+    "@prisma/engines@6.19.3": true,
+    "fsevents@2.3.3": true,
+    "prisma@6.19.3": true
   }
 }

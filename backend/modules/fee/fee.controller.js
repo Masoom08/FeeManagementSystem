@@ -101,6 +101,46 @@ const adjustDeposit = asyncRoute(async (req, res) => {
   res.status(201).json({ success: true, data: result });
 });
 
+const previewAcademicYearDelete = asyncRoute(async (req, res) => {
+  const impact = await feeService.previewAcademicYearDelete(req.params.id);
+  res.status(200).json({ success: true, data: impact });
+});
+
+const deleteAcademicYear = asyncRoute(async (req, res) => {
+  const result = await feeService.deleteAcademicYear(req.params.id);
+  res.status(200).json({ success: true, data: result });
+});
+
+const previewSemesterDelete = asyncRoute(async (req, res) => {
+  const impact = await feeService.previewSemesterDelete(req.params.id);
+  res.status(200).json({ success: true, data: impact });
+});
+
+const deleteSemester = asyncRoute(async (req, res) => {
+  const result = await feeService.deleteSemester(req.params.id);
+  res.status(200).json({ success: true, data: result });
+});
+
+const previewFeeStructureDelete = asyncRoute(async (req, res) => {
+  const impact = await feeService.previewFeeStructureDelete(req.params.id);
+  res.status(200).json({ success: true, data: impact });
+});
+
+const deleteFeeStructure = asyncRoute(async (req, res) => {
+  const result = await feeService.deleteFeeStructure(req.params.id);
+  res.status(200).json({ success: true, data: result });
+});
+
+const previewHostelRateDelete = asyncRoute(async (req, res) => {
+  const impact = await feeService.previewHostelRateDelete(req.params.id);
+  res.status(200).json({ success: true, data: impact });
+});
+
+const deleteHostelRate = asyncRoute(async (req, res) => {
+  const result = await feeService.deleteHostelRate(req.params.id);
+  res.status(200).json({ success: true, data: result });
+});
+
 module.exports = {
   createSession,
   listSessions,
@@ -122,4 +162,12 @@ module.exports = {
   waiveLateFeeForStudent,
   refundDeposit,
   adjustDeposit,
+  previewAcademicYearDelete,
+  deleteAcademicYear,
+  previewSemesterDelete,
+  deleteSemester,
+  previewFeeStructureDelete,
+  deleteFeeStructure,
+  previewHostelRateDelete,
+  deleteHostelRate,
 };

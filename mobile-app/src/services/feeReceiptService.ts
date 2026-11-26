@@ -93,9 +93,11 @@ async function buildReceiptPdf(student: Student, receipt: PaymentReceipt) {
   page.drawText('METHOD', { x: 365, y: 372, size: 8, font: bold, color: rgb(1, 1, 1) })
   page.drawText('AMOUNT (INR)', { x: 455, y: 372, size: 8, font: bold, color: rgb(1, 1, 1) })
 
-  const semesterDescription = receipt.semesters.length
-    ? `Fee payment for ${receipt.semesters.map(number => `Semester ${number}`).join(', ')}`
-    : 'Student fee payment'
+  const semesterDescription = receipt.product === 'HOSTEL'
+    ? 'Hostel fee payment'
+    : receipt.semesters.length
+      ? `Fee payment for ${receipt.semesters.map(number => `Semester ${number}`).join(', ')}`
+      : 'Student fee payment'
   drawWrapped(page, semesterDescription, 53, 339, 285, regular, 10, ink, 13)
   drawWrapped(page, safeText(receipt.method), 365, 339, 78, regular, 9, ink, 12)
   const amount = `INR ${new Intl.NumberFormat('en-IN', { maximumFractionDigits: 0 }).format(receipt.amount)}`

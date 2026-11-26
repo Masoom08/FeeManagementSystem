@@ -1,9 +1,36 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react'
 import { Icon } from '../../../components/ui/AppIcon'
-import { studentFeeRecords, type SemesterFee, type StudentFeeRecord, type StudentFeeStatus } from '../../../data/mockData'
 import { api, type ApiSession, type ApiReceipt, type ApiSemester, type ApiStudentImportBatch, type ApiStudentSummary } from '../../../api/client'
 import { InvoiceTemplate } from '../../payments/components/InvoiceTemplate'
 import './StudentFeeManagement.css'
+
+type StudentFeeStatus = 'Paid' | 'Unpaid'
+type SemesterFee = {
+  semester: string
+  feeDue: number
+  amountPaid: number
+  paymentDate: string | null
+  dueDate: string
+  status: StudentFeeStatus
+}
+type StudentFeeRecord = {
+  name: string
+  registrationNo: string
+  phone: string
+  course: string
+  batch: string
+  studyYear: number
+  startDate: string
+  endDate: string
+  semester: string
+  feeDue: number
+  amountPaid: number
+  paymentDate: string | null
+  dueDate: string
+  status: StudentFeeStatus
+  lateFee: number
+  semesterFees: SemesterFee[]
+}
 
 type StatusFilter = 'All' | StudentFeeStatus
 type StudentFeeManagementProps = { onNotice: (message: string) => void; view: 'students' | 'reminders'; onAddStudent?: () => void; canImportStudents?: boolean; refreshKey?: number }
@@ -66,16 +93,6 @@ function toReminderLogs(rows: Awaited<ReturnType<typeof api.reminders>>, student
   })).sort((a, b) => b.createdAt.localeCompare(a.createdAt))
 }
 
-function getReminderRecipients(course: string, semester: string) {
-  return studentFeeRecords.flatMap(student => {
-    if (course !== 'All courses' && student.course !== course) return []
-    const fee = semester === 'All semesters'
-      ? student.semesterFees[(student.studyYear - 1) * 2]
-      : student.semesterFees.find(item => item.semester === semester)
-    return fee?.status === 'Unpaid' ? [{ student, semester: fee.semester }] : []
-  })
-}
-
 function localDateKey(value: string) {
   const date = new Date(value)
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
@@ -101,19 +118,9 @@ function matchesCourseTab(courseName: string, tab: string) {
 function restoreReminderHistory(): ReminderLog[] {
   try {
     const saved = JSON.parse(localStorage.getItem(reminderHistoryKey) ?? '[]') as Array<ReminderLog | ReminderBatch>
-    return saved.flatMap(entry => {
-      if ('name' in entry) return [entry]
-      return getReminderRecipients(entry.course, entry.semester).slice(0, entry.recipients).map(({ student, semester }) => ({
-        id: `${entry.id}-${student.registrationNo}`,
-        name: student.name,
-        registrationNo: student.registrationNo,
-        phone: student.phone,
-        course: student.course,
-        semester,
-        createdAt: entry.createdAt,
-        message: entry.message,
-      }))
-    })
+    // Older versions stored reminder batches rather than individual recipients.
+    // Keep only complete log entries; live reminder history is loaded from the API.
+    return saved.filter((entry): entry is ReminderLog => 'name' in entry)
   } catch {
     return []
   }

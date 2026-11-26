@@ -1,8 +1,13 @@
+
 const { z } = require("zod");
 const { actedBy, idParams, isoDate, positiveAmount } = require("../../lib/ids");
+const { SEMESTER_NAMES } = require("../../lib/terms");
 
 const label = z.string().trim().min(1, "label is required").max(20, "label must be at most 20 characters");
-const name = z.string().trim().min(1, "name is required").max(40, "name must be at most 40 characters");
+
+const name = z.enum(SEMESTER_NAMES, {
+  errorMap: () => ({ message: "name must be Ist Semester or IInd Semester" }),
+});
 
 const createSessionBody = z
   .object({
@@ -12,9 +17,13 @@ const createSessionBody = z
   })
   .strict();
 
-const updateSessionBody = createSessionBody.partial().strict().refine((value) => Object.keys(value).length > 0, {
-  message: "At least one field is required", path: ["body"],
-});
+const updateSessionBody = createSessionBody
+  .partial()
+  .strict()
+  .refine((value) => Object.keys(value).length > 0, {
+    message: "At least one field is required",
+    path: ["body"],
+  });
 
 const createSemesterBody = z
   .object({
@@ -26,35 +35,65 @@ const createSemesterBody = z
   })
   .strict();
 
-const updateSemesterBody = z.object({
-  name: name.optional(),
-  dueDate: isoDate.optional(),
-  graceDays: z.number().int().min(0).optional(),
-  fineEndDate: isoDate.nullable().optional(),
-}).strict().refine((value) => Object.keys(value).length > 0, {
-  message: "At least one field is required", path: ["body"],
-});
+const updateSemesterBody = z
+  .object({
+    name: name.optional(),
+    dueDate: isoDate.optional(),
+    graceDays: z.number().int().min(0).optional(),
+    fineEndDate: isoDate.nullable().optional(),
+  })
+  .strict()
+  .refine((value) => Object.keys(value).length > 0, {
+    message: "At least one field is required",
+    path: ["body"],
+  });
 
 const createFeeStructureBody = z
   .object({
     courseId: z.number().int().positive(),
     sessionId: z.number().int().positive(),
     semesterId: z.number().int().positive(),
-    component: z.enum(["ACADEMIC_FEE", "ACADEMIC_CAUTION", "HOSTEL_FEE", "HOSTEL_SECURITY"], {
-      errorMap: () => ({ message: "component must be a fee component" }),
-    }),
+    component: z.enum(
+      ["ACADEMIC_FEE", "ACADEMIC_CAUTION", "HOSTEL_FEE", "HOSTEL_SECURITY"],
+      {
+        errorMap: () => ({ message: "component must be a fee component" }),
+      }
+    ),
     studyYear: z.number().int().positive("studyYear must be a positive integer"),
     amount: positiveAmount("amount"),
   })
   .strict();
 
-const updateFeeStructureBody = createFeeStructureBody.partial().strict().refine((value) => Object.keys(value).length > 0, {
-  message: "At least one field is required", path: ["body"],
-});
+// Main: partial update validation
+const updateFeeStructureBody = createFeeStructureBody
+  .partial()
+  .strict()
+  .refine((value) => Object.keys(value).length > 0, {
+    message: "At least one field is required",
+    path: ["body"],
+  });
 
-const feeStructuresQuery = z.object({
-  sessionId: z.coerce.number().int().positive().optional(),
-}).strict();
+// Main: session filtering
+const feeStructuresQuery = z
+  .object({
+    sessionId: z.coerce.number().int().positive().optional(),
+  })
+  .strict();
+
+// Mau: hostel rate update validation
+const updateHostelRateBody = z
+  .object({
+    condition: z.enum(["AC", "Non-AC"], {
+      errorMap: () => ({ message: "condition must be AC or Non-AC" }),
+    }),
+    occupancy: z
+      .string()
+      .trim()
+      .min(1, "occupancy is required")
+      .max(30, "occupancy must be at most 30 characters"),
+    annualFee: positiveAmount("annualFee"),
+  })
+  .strict();
 
 const runFinesBody = z
   .object({
@@ -71,7 +110,12 @@ const waiveFineBody = z
   })
   .strict();
 
-const waiveLateFeeBody = z.object({ actedBy, reason: z.string().trim().min(1).max(255) }).strict();
+const waiveLateFeeBody = z
+  .object({
+    actedBy,
+    reason: z.string().trim().min(1).max(255),
+  })
+  .strict();
 
 const refundDepositBody = z
   .object({
@@ -103,6 +147,7 @@ module.exports = {
   createFeeStructureBody,
   updateFeeStructureBody,
   feeStructuresQuery,
+  updateHostelRateBody,
   runFinesBody,
   waiveFineBody,
   waiveLateFeeBody,

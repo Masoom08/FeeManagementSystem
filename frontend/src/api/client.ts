@@ -1,5 +1,6 @@
-
-const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:3000/api').replace(/\/$/, '')
+const API_BASE_URL = (
+  import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:3000/api'
+).replace(/\/$/, '')
 
 export const AUTH_TOKEN_STORAGE_KEY = 'iccmrt-superadmin-token'
 
@@ -8,6 +9,7 @@ export type ApiCourse = {
   courseCode: string
   courseName: string
   affiliation: string
+  durationYears: number
   lateFeePerDay: number
   active: boolean
 }
@@ -598,6 +600,7 @@ export const api = {
     courseCode: string
     courseName: string
     affiliation: 'AKTU' | 'LU'
+    durationYears: number
     lateFeePerDay: number
   }) => request<ApiCourse>('/courses', {
     method: 'POST',

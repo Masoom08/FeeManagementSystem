@@ -9,10 +9,15 @@ const verifyOtpBody = z.object({
   otp: z.string().trim().regex(/^\d{6}$/),
 }).strict();
 
+const chooseHostelSeatBody = z.object({
+  hostelRateId: z.number().int().positive(),
+}).strict();
+
 const createPaymentBody = z.object({
   amount: z.number().int().positive(),
   idempotencyKey: z.string().trim().min(1).max(80),
+  product: z.enum(["ACADEMIC", "HOSTEL"]).optional(),
 }).strict();
 const orderIdParams = z.object({ orderId: z.string().trim().min(1).max(80) }).strict();
 
-module.exports = { requestOtpBody, verifyOtpBody, createPaymentBody, orderIdParams, paymentIdParams: idParams("paymentId") };
+module.exports = { requestOtpBody, verifyOtpBody, chooseHostelSeatBody, createPaymentBody, orderIdParams, paymentIdParams: idParams("paymentId") };

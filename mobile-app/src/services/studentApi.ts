@@ -1,3 +1,4 @@
+import type { HostelSeatChoice } from '../components/HostelFeeCard'
 import type { PaymentReceipt, SemesterFee, Student } from '../types/fee'
 
 const baseUrl = process.env.EXPO_PUBLIC_API_URL?.replace(/\/$/, '')
@@ -40,31 +41,77 @@ export async function verifyStudentOtp(phoneNumber: string, otp: string) {
   const result = await request<{ accessToken: string; student: { id: number; name: string; registrationNumber: string; phoneNumber: string; studyYear: number; course: { courseName: string }; batch: { label: string } } }>('/student-auth/verify-otp', undefined, { method: 'POST', body: JSON.stringify({ phoneNumber, otp }) })
   return {
     accessToken: result.accessToken,
-    student: { id: result.student.id, name: result.student.name, registrationNo: result.student.registrationNumber, phone: result.student.phoneNumber, year: result.student.studyYear, course: result.student.course.courseName, batch: Number(result.student.batch.label.slice(0, 4)) } as Student,
+    student: { id: result.student.id, name: result.student.name, registrationNo: result.student.registrationNumber, phone: result.student.phoneNumber, year: result.student.studyYear, course: result.student.course.courseName, batch: result.student.batch.label } as Student,
   }
 }
 
 export type StudentPaymentStatus = { reference: string | null; status: 'PENDING' | 'SUCCESS' | 'FAILED'; amount: number; method: string; receiptNo: string | null }
 
+type StudentProfileResponse = {
+  student: Student
+  hostelOutstanding?: number
+  hostelSeat?: HostelSeatChoice | null
+  hostelRates?: HostelSeatChoice[]
+  payments?: StudentPaymentStatus[]
+  fees: (Omit<SemesterFee, 'dueDate' | 'paymentDate' | 'billed'> & { dueDate: string | null; paymentDate: string | null; billed?: boolean })[]
+}
+
 export async function loadStudentProfile(token: string) {
-  const result = await request<{ student: Student; hostelOutstanding?: number; payments?: StudentPaymentStatus[]; fees: (Omit<SemesterFee, 'dueDate' | 'paymentDate'> & { dueDate: string; paymentDate: string | null })[] }>('/student-auth/me', token)
-  return { ...result, payments: result.payments ?? [], hostelOutstanding: result.hostelOutstanding ?? 0, fees: result.fees.map(fee => ({ ...fee, dueDate: new Date(fee.dueDate).toLocaleDateString('en-IN'), paymentDate: fee.paymentDate ? new Date(fee.paymentDate).toLocaleDateString('en-IN') : null })) }
+  const result = await request<StudentProfileResponse>('/student-auth/me', token)
+  return { ...result, payments: result.payments ?? [], hostelOutstanding: result.hostelOutstanding ?? 0, hostelSeat: result.hostelSeat ?? null, hostelRates: result.hostelRates ?? [], fees: result.fees.map(fee => ({ ...fee, billed: fee.billed !== false, dueDate: fee.dueDate ? new Date(fee.dueDate).toLocaleDateString('en-IN') : null, paymentDate: fee.paymentDate ? new Date(fee.paymentDate).toLocaleDateString('en-IN') : null })) }
+}
+
+export async function saveHostelSeat(token: string, hostelRateId: number) {
+  return request<StudentProfileResponse>('/student-auth/hostel-seat', token, { method: 'PATCH', body: JSON.stringify({ hostelRateId }) })
 }
 
 export async function loadStudentReceipts(token: string) {
-  const receipts = await request<{ receiptNo: string; paymentId: number; amount: number; paidOn: string; method: string; semesters: number[] }[]>('/student-auth/receipts', token)
+  const receipts = await request<{ receiptNo: string; paymentId: number; amount: number; paidOn: string; method: string; product?: 'ACADEMIC' | 'HOSTEL'; semesters: number[] }[]>('/student-auth/receipts', token)
   return receipts.map(receipt => ({ ...receipt, paymentDate: new Date(receipt.paidOn).toLocaleDateString('en-IN') })) as PaymentReceipt[]
 }
 
-export async function createStudentPayment(token: string, amount: number, idempotencyKey: string) {
+export async function createStudentPayment(token: string, amount: number, idempotencyKey: string, product?: 'ACADEMIC' | 'HOSTEL') {
   return request<{ orderId: string }>('/student-auth/payments', token, {
-    method: 'POST', body: JSON.stringify({ amount, idempotencyKey }),
+    method: 'POST', body: JSON.stringify({ amount, idempotencyKey, ...(product === 'HOSTEL' ? { product } : {}) }),
   })
 }
 
 export async function completeMockStudentPayment(token: string, orderId: string, result: 'success' | 'failure') {
   const action = result === 'success' ? 'mock-success' : 'mock-failure'
   return request<{ orderId: string; status: 'SUCCESS' | 'FAILED'; receiptNo?: string }>(`/student-auth/payments/${encodeURIComponent(orderId)}/${action}`, token, { method: 'POST' })
+}
+
+export type ConfirmedStudentPayment = { orderId: string; status: 'SUCCESS'; receiptNo?: string }
+
+export class PaymentConfirmError extends Error {
+  orderId?: string
+
+  constructor(message: string, orderId?: string) {
+    super(message)
+    this.name = 'PaymentConfirmError'
+    this.orderId = orderId
+  }
+}
+
+export function displayPaymentMethod(method: string) {
+  return method === 'MOCK' ? 'Online' : method
+}
+
+export async function confirmStudentPayment(token: string, amount: number, existingOrderId?: string, product?: 'ACADEMIC' | 'HOSTEL'): Promise<ConfirmedStudentPayment> {
+  let orderId = existingOrderId
+  try {
+    if (!orderId) {
+      const created = await createStudentPayment(token, amount, `MOBILE-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`, product)
+      orderId = created.orderId
+    }
+    const payment = await completeMockStudentPayment(token, orderId, 'success')
+    if (payment.status !== 'SUCCESS') throw new Error('The payment could not be confirmed.')
+    return { orderId, status: 'SUCCESS', receiptNo: payment.receiptNo }
+  } catch (error) {
+    if (error instanceof PaymentConfirmError) throw error
+    const message = error instanceof Error ? error.message : 'Please try again.'
+    throw new PaymentConfirmError(message, orderId)
+  }
 }
 
 export async function signOutStudent(token: string) {

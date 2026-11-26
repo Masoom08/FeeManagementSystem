@@ -1,7 +1,20 @@
 import { Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-native'
+import { displayPaymentMethod } from '../services/studentApi'
 import type { PaymentReceipt } from '../types/fee'
 import { colors } from '../theme/colors'
 import { formatCurrency } from '../utils/formatCurrency'
+
+function receiptCoverage(receipt: PaymentReceipt) {
+  if (receipt.product === 'HOSTEL') return 'Hostel'
+  if (!receipt.semesters.length) return 'Fee payment'
+  return receipt.semesters.map(number => `Semester ${number}`).join(', ')
+}
+
+function receiptCoverageShort(receipt: PaymentReceipt) {
+  if (receipt.product === 'HOSTEL') return 'Hostel'
+  if (!receipt.semesters.length) return 'Fees'
+  return receipt.semesters.map(number => `Sem ${number}`).join(', ')
+}
 
 export function ReceiptHistoryTable({ receipts, onDownload }: { receipts: PaymentReceipt[]; onDownload: (receipt: PaymentReceipt) => void }) {
   const { width } = useWindowDimensions()
@@ -9,9 +22,9 @@ export function ReceiptHistoryTable({ receipts, onDownload }: { receipts: Paymen
 
   if (width < 600) {
     return <View style={styles.mobileList}>{receipts.map(receipt => <View key={receipt.receiptNo} style={styles.mobileCard}>
-      <View style={styles.mobileTop}><View><Text style={styles.mobileDate}>{receipt.paymentDate}</Text><Text style={styles.secondaryText}>{receipt.semesters.map(number => `Semester ${number}`).join(', ')}</Text></View><Text style={styles.mobileAmount}>{formatCurrency(receipt.amount)}</Text></View>
+      <View style={styles.mobileTop}><View><Text style={styles.mobileDate}>{receipt.paymentDate}</Text><Text style={styles.secondaryText}>{receiptCoverage(receipt)}</Text></View><Text style={styles.mobileAmount}>{formatCurrency(receipt.amount)}</Text></View>
       <View style={styles.mobileReceipt}><Text style={styles.mobileLabel}>RECEIPT</Text><Text selectable style={styles.mobileReceiptNo}>{receipt.receiptNo}</Text></View>
-      <View style={styles.mobileBottom}><Text style={styles.mobileMethod}>{receipt.method}</Text><Pressable onPress={() => onDownload(receipt)} style={({ pressed }) => [styles.mobileDownload, pressed && styles.downloadPressed]}><Text style={styles.downloadIcon}>↓</Text><Text style={styles.downloadText}>Download PDF</Text></Pressable></View>
+      <View style={styles.mobileBottom}><Text style={styles.mobileMethod}>{displayPaymentMethod(receipt.method)}</Text><Pressable onPress={() => onDownload(receipt)} style={({ pressed }) => [styles.mobileDownload, pressed && styles.downloadPressed]}><Text style={styles.downloadIcon}>↓</Text><Text style={styles.downloadText}>Download PDF</Text></Pressable></View>
     </View>)}</View>
   }
 
@@ -27,7 +40,7 @@ export function ReceiptHistoryTable({ receipts, onDownload }: { receipts: Paymen
         </View>
         {receipts.map((receipt, index) => <View key={receipt.receiptNo} style={[styles.bodyRow, index === receipts.length - 1 && styles.lastRow]}>
           <Text style={[styles.bodyText, styles.dateColumn]}>{receipt.paymentDate}</Text>
-          <View style={[styles.semesterColumn, styles.semesterCell]}><Text style={styles.primaryText}>{receipt.semesters.map(number => `Sem ${number}`).join(', ')}</Text><Text style={styles.secondaryText}>{receipt.method}</Text></View>
+          <View style={[styles.semesterColumn, styles.semesterCell]}><Text style={styles.primaryText}>{receiptCoverageShort(receipt)}</Text><Text style={styles.secondaryText}>{displayPaymentMethod(receipt.method)}</Text></View>
           <Text style={[styles.amountText, styles.amountColumn]}>{formatCurrency(receipt.amount)}</Text>
           <Text style={[styles.bodyText, styles.receiptColumn]} numberOfLines={1}>{receipt.receiptNo}</Text>
           <View style={[styles.actionColumn, styles.actionCell]}><Pressable onPress={() => onDownload(receipt)} style={({ pressed }) => [styles.downloadButton, pressed && styles.downloadPressed]}><Text style={styles.downloadIcon}>↓</Text><Text style={styles.downloadText}>Download PDF</Text></Pressable></View>

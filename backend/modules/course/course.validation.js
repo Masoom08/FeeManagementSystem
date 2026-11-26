@@ -30,11 +30,21 @@ const lateFeePerDay = z
   .int("lateFeePerDay must be an integer")
   .positive("lateFeePerDay must be a positive integer");
 
+const durationYears = z
+  .number({
+    required_error: "durationYears is required",
+    invalid_type_error: "durationYears must be an integer",
+  })
+  .int("durationYears must be an integer")
+  .min(1, "durationYears must be at least 1")
+  .max(6, "durationYears must be at most 6");
+
 const createCourseBody = z
   .object({
     courseCode,
     courseName,
     affiliation,
+    durationYears,
     lateFeePerDay,
     active: z.boolean({ invalid_type_error: "active must be a boolean" }).optional(),
   })
@@ -45,6 +55,7 @@ const updateCourseBody = z
     courseCode: courseCode.optional(),
     courseName: courseName.optional(),
     affiliation: affiliation.optional(),
+    durationYears: durationYears.optional(),
     lateFeePerDay: lateFeePerDay.optional(),
     active: z.boolean({ invalid_type_error: "active must be a boolean" }).optional(),
   })

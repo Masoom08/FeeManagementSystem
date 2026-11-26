@@ -99,6 +99,7 @@ model Course {
   courseCode    String         @unique @map("course_code") @db.VarChar(20)
   courseName    String         @map("course_name") @db.VarChar(120)
   affiliation   Affiliation
+  durationYears Int            @default(3) @map("duration_years")
   lateFeePerDay Int            @map("late_fee_per_day")
   active        Boolean        @default(true)
   students      Student[]
@@ -181,10 +182,11 @@ model FeeStructure {
 }
 
 model HostelRate {
-  id         Int    @id @default(autoincrement())
-  condition  String @db.VarChar(10)
-  occupancy  String @db.VarChar(30)
-  annualFee  Int    @map("annual_fee")
+  id         Int       @id @default(autoincrement())
+  condition  String    @db.VarChar(10)
+  occupancy  String    @db.VarChar(30)
+  annualFee  Int       @map("annual_fee")
+  students   Student[]
 
   @@unique([condition, occupancy])
   @@map("hostel_rates")
@@ -206,6 +208,7 @@ model Student {
   admissionSemesterId  Int            @map("admission_semester_id")
   admissionType        AdmissionType  @map("admission_type")
   isHosteller          Boolean        @default(false) @map("is_hosteller")
+  hostelRateId         Int?           @map("hostel_rate_id")
   studyYear            Int            @default(1) @map("study_year")
   status               StudentStatus  @default(ACTIVE)
   leftOn               DateTime?      @map("left_on") @db.Date
@@ -213,10 +216,12 @@ model Student {
   batch                Batch          @relation(fields: [batchId], references: [id])
   session              Session        @relation(fields: [sessionId], references: [id])
   admissionSemester    Semester       @relation(fields: [admissionSemesterId], references: [id])
+  hostelRate           HostelRate?    @relation(fields: [hostelRateId], references: [id])
   feeAccounts          FeeAccount[]
   otpChallenges        StudentOtp[]
   reminders            Reminder[]
 
+  @@index([hostelRateId])
   @@map("students")
 }
 

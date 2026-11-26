@@ -1,5 +1,6 @@
 const { z } = require("zod");
 const { idParams, isoDate } = require("../../lib/ids");
+const { SEMESTER_NAMES } = require("../../lib/terms");
 
 const registrationNumber = z
   .string({ required_error: "registrationNumber is required", invalid_type_error: "registrationNumber must be a string" })
@@ -17,8 +18,7 @@ const phone = (field) =>
   z
     .string({ required_error: `${field} is required`, invalid_type_error: `${field} must be a string` })
     .trim()
-    .min(8, `${field} must be at least 8 characters`)
-    .max(20, `${field} must be at most 20 characters`);
+    .regex(/^[1-9]\d{9}$/, `${field} must be a 10-digit number`);
 
 const email = z
   .string({ required_error: "email is required", invalid_type_error: "email must be a string" })
@@ -50,6 +50,7 @@ const createStudentBody = z
 
 const updateStudentBody = z
   .object({
+    registrationNumber: registrationNumber.optional(),
     name: personName.optional(),
     phoneNumber: phone("phoneNumber").optional(),
     whatsappNumber: phone("whatsappNumber").optional(),

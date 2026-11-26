@@ -204,7 +204,7 @@ async function main() {
     title: "Create MBA (AKTU)",
     method: "POST",
     path: "/api/courses",
-    body: { courseCode: "AKTU01", courseName: "MBA (AKTU)", affiliation: "AKTU", lateFeePerDay: 15 },
+    body: { courseCode: "AKTU01", courseName: "MBA (AKTU)", affiliation: "AKTU", durationYears: 2, lateFeePerDay: 15 },
   });
 
   const createBba = await record({
@@ -213,7 +213,7 @@ async function main() {
     title: "Create a second course",
     method: "POST",
     path: "/api/courses",
-    body: { courseCode: "AKTU02", courseName: "BBA (AKTU)", affiliation: "AKTU", lateFeePerDay: 5 },
+    body: { courseCode: "AKTU02", courseName: "BBA (AKTU)", affiliation: "AKTU", durationYears: 3, lateFeePerDay: 5 },
   });
 
   const courseList = dataOf(
@@ -298,7 +298,7 @@ async function main() {
     title: "Duplicate courseCode",
     method: "POST",
     path: "/api/courses",
-    body: { courseCode: "AKTU01", courseName: "MBA duplicate", affiliation: "AKTU", lateFeePerDay: 15 },
+    body: { courseCode: "AKTU01", courseName: "MBA duplicate", affiliation: "AKTU", durationYears: 2, lateFeePerDay: 15 },
   });
   await record({
     module: "Course",
@@ -930,12 +930,12 @@ async function main() {
       false,
       1,
       "2026-27",
-      "SEMESTER_1",
+      "Ist Semester",
     ];
   }
   const validFile = await writeSheet("students-valid.xlsx", [sheetRow("REG-XLS", "Farah Khan", "farah@example.com", "DIRECT")]);
   const badFile = await writeSheet("students-bad.xlsx", [
-    ["", "No Reg", "9876543210", "9123456780", "noreg@example.com", "Father", "Management", "AKTU01", "DIRECT", false, 1, "2026-27", "SEMESTER_1"],
+    ["", "No Reg", "9876543210", "9123456780", "noreg@example.com", "Father", "Management", "AKTU01", "DIRECT", false, 1, "2026-27", "Ist Semester"],
   ]);
   const duplicateFile = await writeSheet("students-duplicate.xlsx", [sheetRow("REG-ONTIME", "Asha Copy", "copy@example.com", "COUNSELLING")]);
 

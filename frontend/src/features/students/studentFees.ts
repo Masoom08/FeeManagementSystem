@@ -1,4 +1,5 @@
 import type { ApiAcademicYear, ApiSemester, ApiStudentSummary } from '../../api/client'
+import { programSemesterLabel, programSemesterNumber } from '../academic/labels'
 
 export type StudentFeeStatus = 'Paid' | 'Unpaid'
 
@@ -64,10 +65,14 @@ export function toFeeRecord(student: ApiStudentSummary, years: ApiAcademicYear[]
     const latestWaiver = waivers.at(-1)
     const payment = lines.filter(line => line.entryType === 'PAYMENT').at(-1)
     const balance = Math.max(0, feeDue - amountPaid - adjustments + lateFee)
-    const label = years.find(item => item.id === semester.academicYearId)?.label
+    const orderedYears = [...years].sort((a, b) => a.startDate.localeCompare(b.startDate) || a.label.localeCompare(b.label))
+    const currentIndex = orderedYears.findIndex(item => item.id === student.academicYearId)
+    const feeIndex = orderedYears.findIndex(item => item.id === semester.academicYearId)
+    const studyYear = currentIndex >= 0 && feeIndex >= 0 ? student.studyYear - (currentIndex - feeIndex) : student.studyYear
+    const semesterNumber = programSemesterNumber(Math.max(1, studyYear), semester.name)
     return [{
       semesterId: semester.id,
-      semester: label ? `${label} · ${semester.name}` : semester.name,
+      semester: programSemesterLabel(semesterNumber),
       feeDue, amountPaid, balance, paymentDate: payment?.effectiveDate ?? null, dueDate: semester.dueDate,
       status: (balance === 0 ? 'Paid' : 'Unpaid') as StudentFeeStatus,
       lateFee, fineEntryId: openFine?.id ?? null, fineRemaining: openFine ? openFine.amount - covered : 0,

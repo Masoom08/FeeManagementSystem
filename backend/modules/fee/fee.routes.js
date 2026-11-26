@@ -119,6 +119,21 @@ const hostelRates = express.Router();
 hostelRates.get("/", controller.listHostelRates);
 
 hostelRates.get(
+  "/selections",
+  controller.listHostelSelections
+);
+
+hostelRates.patch(
+  "/:id",
+  requireSuperAdmin,
+  validate({
+    params: schemas.idParams,
+    body: schemas.updateHostelRateBody,
+  }),
+  controller.updateHostelRate
+);
+
+hostelRates.get(
   "/:id/delete-preview",
   requireSuperAdmin,
   validate({ params: schemas.idParams }),

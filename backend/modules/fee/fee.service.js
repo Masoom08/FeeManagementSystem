@@ -88,50 +88,71 @@ function listSemesters() {
   return prisma.semester.findMany({ orderBy: { id: "asc" } });
 }
 
+
 async function updateSemester(id, data) {
   const existing = await prisma.semester.findUnique({ where: { id } });
   if (!existing) throw notFound("SEMESTER_NOT_FOUND");
+
   const patch = { ...data };
+
   if (data.dueDate) patch.dueDate = parseISODate(data.dueDate);
   if (data.fineEndDate) patch.fineEndDate = parseISODate(data.fineEndDate);
   if (data.fineEndDate === null) patch.fineEndDate = null;
+
   try {
-    return await prisma.semester.update({ where: { id }, data: patch });
+    return await prisma.semester.update({
+      where: { id },
+      data: patch,
+    });
   } catch (err) {
-    if (err.code === "P2002") throw conflict("DUPLICATE_SEMESTER");
+    if (err.code === "P2002") {
+      throw conflict("DUPLICATE_SEMESTER");
+    }
     throw err;
   }
 }
 
-async function deleteSemester(id) {
-  const existing = await prisma.semester.findUnique({ where: { id } });
-  if (!existing) throw notFound("SEMESTER_NOT_FOUND");
-  const counts = await prisma.semester.findUnique({ where: { id }, include: { _count: { select: { feeStructures: true, ledgerEntries: true, students: true } } } });
-  if (Object.values(counts._count).some(Boolean)) {
-    throw conflict("SEMESTER_IN_USE", [{ message: "This semester is linked to students, fee structures, or fee ledger entries and cannot be deleted." }]);
-  }
-  await prisma.semester.delete({ where: { id } });
-  return { id, deleted: true };
-}
-
-async function createFeeStructure(data) {
+// Validate fee structure against course, session and semester
+async function assertFeeStructure(data) {
   const [course, year, semester] = await Promise.all([
     prisma.course.findUnique({ where: { id: data.courseId } }),
     prisma.session.findUnique({ where: { id: data.sessionId } }),
     prisma.semester.findUnique({ where: { id: data.semesterId } }),
   ]);
+
   if (!course) {
     throw notFound("COURSE_NOT_FOUND");
   }
+
   if (!course.active) {
-    throw conflict("COURSE_INACTIVE", [{ message: "This course is inactive and cannot be used for a new fee structure." }]);
+    throw conflict("COURSE_INACTIVE", [
+      {
+        message: "This course is inactive and cannot be used for a new fee structure.",
+      },
+    ]);
   }
+
+  if (data.studyYear > course.durationYears) {
+    throw badRequest("STUDY_YEAR_OUT_OF_RANGE", [
+      {
+        path: "studyYear",
+        message: `studyYear must be between 1 and ${course.durationYears}`,
+      },
+    ]);
+  }
+
   if (!year) {
     throw notFound("SESSION_NOT_FOUND");
   }
+
   if (!semester || semester.sessionId !== data.sessionId) {
     throw notFound("SEMESTER_NOT_FOUND");
   }
+}
+
+async function createFeeStructure(data) {
+  await assertFeeStructure(data);
+
   try {
     return await prisma.feeStructure.create({ data });
   } catch (err) {
@@ -145,39 +166,97 @@ async function createFeeStructure(data) {
 function listFeeStructures(sessionId) {
   return prisma.feeStructure.findMany({
     where: sessionId ? { sessionId } : {},
-    orderBy: [{ courseId: "asc" }, { semesterId: "asc" }, { component: "asc" }],
+    orderBy: [
+      { courseId: "asc" },
+      { semesterId: "asc" },
+      { component: "asc" },
+    ],
   });
 }
 
 async function updateFeeStructure(id, data) {
-  const existing = await prisma.feeStructure.findUnique({ where: { id } });
-  if (!existing) throw notFound("FEE_STRUCTURE_NOT_FOUND");
+  const existing = await prisma.feeStructure.findUnique({
+    where: { id },
+  });
+
+  if (!existing) {
+    throw notFound("FEE_STRUCTURE_NOT_FOUND");
+  }
+
+  // Validate the complete updated record, not just the partial request.
   const next = { ...existing, ...data };
-  const [course, year, semester] = await Promise.all([
-    prisma.course.findUnique({ where: { id: next.courseId } }),
-    prisma.session.findUnique({ where: { id: next.sessionId } }),
-    prisma.semester.findUnique({ where: { id: next.semesterId } }),
-  ]);
-  if (!course) throw notFound("COURSE_NOT_FOUND");
-  if (!year) throw notFound("SESSION_NOT_FOUND");
-  if (!semester || semester.sessionId !== next.sessionId) throw notFound("SEMESTER_NOT_FOUND");
+
+  await assertFeeStructure(next);
+
   try {
-    return await prisma.feeStructure.update({ where: { id }, data });
+    return await prisma.feeStructure.update({
+      where: { id },
+      data,
+    });
   } catch (err) {
-    if (err.code === "P2002") throw conflict("DUPLICATE_FEE_STRUCTURE");
+    if (err.code === "P2002") {
+      throw conflict("DUPLICATE_FEE_STRUCTURE");
+    }
     throw err;
   }
 }
 
-async function deleteFeeStructure(id) {
-  const existing = await prisma.feeStructure.findUnique({ where: { id } });
-  if (!existing) throw notFound("FEE_STRUCTURE_NOT_FOUND");
-  await prisma.feeStructure.delete({ where: { id } });
-  return { id, deleted: true };
-}
 
 function listHostelRates() {
   return prisma.hostelRate.findMany({ orderBy: [{ condition: "asc" }, { annualFee: "desc" }] });
+}
+
+async function listHostelSelections() {
+  const students = await prisma.student.findMany({
+    where: { hostelRateId: { not: null } },
+    orderBy: [{ name: "asc" }, { registrationNumber: "asc" }],
+    include: {
+      course: { select: { courseName: true } },
+      academicYear: { select: { label: true } },
+      hostelRate: true,
+      feeAccounts: {
+        where: { product: "HOSTEL" },
+        include: {
+          ledgerEntries: {
+            where: { entryType: "ASSESSMENT", component: "HOSTEL_FEE" },
+            select: { id: true },
+          },
+        },
+      },
+    },
+  });
+  return students.filter((student) => student.hostelRate).map((student) => ({
+    studentId: student.id,
+    name: student.name,
+    registrationNumber: student.registrationNumber,
+    course: student.course.courseName,
+    batch: student.academicYear.label,
+    condition: student.hostelRate.condition,
+    occupancy: student.hostelRate.occupancy,
+    annualFee: student.hostelRate.annualFee,
+    billed: student.feeAccounts.some((account) => account.ledgerEntries.length > 0),
+  }));
+}
+
+async function updateHostelRate(id, data) {
+  const existing = await prisma.hostelRate.findUnique({ where: { id } });
+  if (!existing) {
+    throw notFound();
+  }
+  const taken = await prisma.hostelRate.findFirst({
+    where: { condition: data.condition, occupancy: data.occupancy, id: { not: id } },
+  });
+  if (taken) {
+    throw conflict("DUPLICATE_HOSTEL_RATE");
+  }
+  try {
+    return await prisma.hostelRate.update({ where: { id }, data });
+  } catch (err) {
+    if (err.code === "P2002") {
+      throw conflict("DUPLICATE_HOSTEL_RATE");
+    }
+    throw err;
+  }
 }
 
 async function getAccount(id) {
@@ -544,10 +623,13 @@ module.exports = {
   updateSemester,
   deleteSemester,
   createFeeStructure,
+  updateFeeStructure,
   listFeeStructures,
   updateFeeStructure,
   deleteFeeStructure,
   listHostelRates,
+  listHostelSelections,
+  updateHostelRate,
   getAccount,
   runFines,
   waiveFine,

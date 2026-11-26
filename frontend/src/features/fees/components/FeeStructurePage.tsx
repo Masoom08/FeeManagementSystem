@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { Icon } from '../../../components/ui/AppIcon'
@@ -23,6 +22,7 @@ type OverviewGroup = {
   years: number
   courses: ApiCourse[]
 }
+
 
 function currentSessionId(sessions: ApiSession[]) {
   const now = new Date()

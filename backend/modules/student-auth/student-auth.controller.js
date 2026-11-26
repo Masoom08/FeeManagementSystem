@@ -20,6 +20,11 @@ const getProfile = asyncRoute(async (req, res) => {
   res.status(200).json({ success: true, data: await studentAuthService.getProfile(req.auth.studentId) });
 });
 
+const chooseHostelSeat = asyncRoute(async (req, res) => {
+  const profile = await studentAuthService.chooseHostelSeat(req.auth.studentId, req.body.hostelRateId);
+  res.status(200).json({ success: true, data: profile });
+});
+
 const getReceipt = asyncRoute(async (req, res) => {
   res.status(200).json({ success: true, data: await studentAuthService.getStudentReceipt(req.auth.studentId, Number(req.params.paymentId)) });
 });
@@ -42,4 +47,4 @@ const logout = asyncRoute(async (_req, res) => {
   res.status(200).json({ success: true, data: { message: "Signed out. Remove the bearer token from the client." } });
 });
 
-module.exports = { requestOtp, verifyOtp, listReceipts, getReceipt, getProfile, createPayment, mockPaymentSuccess, mockPaymentFailure, logout };
+module.exports = { requestOtp, verifyOtp, listReceipts, getReceipt, getProfile, chooseHostelSeat, createPayment, mockPaymentSuccess, mockPaymentFailure, logout };

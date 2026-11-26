@@ -100,7 +100,7 @@ if (!course) {
     title: "create course",
     method: "POST",
     path: "/api/courses",
-    body: { courseCode: "AKTU01", courseName: "MBA (AKTU)", affiliation: "AKTU", lateFeePerDay: 15 },
+    body: { courseCode: "AKTU01", courseName: "MBA (AKTU)", affiliation: "AKTU", durationYears: 2, lateFeePerDay: 15 },
     expect: 201,
   }).json.data;
 }
@@ -719,7 +719,7 @@ function sheetRow(registrationNumber, name, email, admissionType) {
     "false",
     1,
     "2026-27",
-    "SEMESTER_1",
+    "Ist Semester",
   ];
 }
 
@@ -728,7 +728,11 @@ function sheetRow(registrationNumber, name, email, admissionType) {
     sheetRow("REG-XLS", "Farah Khan", "farah@example.com", "DIRECT"),
   ]);
   const badFile = await writeSheet("students-bad.xlsx", [
+<<<<<<< HEAD
     ["", "No Reg", "9876543210", "9123456780", "noreg@example.com", "Father", "Management", "AKTU01", "2026-28", "DIRECT", "false", 1, "2026-27", "SEMESTER_1"],
+=======
+    ["", "No Reg", "9876543210", "9123456780", "noreg@example.com", "Father", "Management", "AKTU01", "DIRECT", "false", 1, "2026-27", "Ist Semester"],
+>>>>>>> origin/mau
   ]);
   const duplicateFile = await writeSheet("students-duplicate.xlsx", [
     sheetRow("REG-ONTIME", "Asha Copy", "copy@example.com", "COUNSELLING"),

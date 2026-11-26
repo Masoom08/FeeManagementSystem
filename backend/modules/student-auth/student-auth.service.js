@@ -3,7 +3,7 @@ const { httpError } = require("../../lib/errors");
 const { issueStudentToken } = require("../auth/auth.service");
 const { balances } = require("../../lib/balance");
 const { parseISODate } = require("../../lib/dates");
-const { programSemesterForLine, termOrder } = require("../../lib/programSemester");
+const { programSemesterForLine } = require("../../lib/programSemester");
 const { FIRST_SEMESTER, SECOND_SEMESTER } = require("../../lib/terms");
 const paymentService = require("../payment/payment.service");
 const { assessStudent } = require("../fee/assess");
@@ -137,9 +137,9 @@ async function listReceipts(studentId) {
   const [student, years, payments] = await Promise.all([
     prisma.student.findUnique({
       where: { id: studentId },
-      select: { academicYearId: true, studyYear: true },
+      select: { sessionId: true, studyYear: true },
     }),
-    prisma.academicYear.findMany({ select: { id: true, label: true, startDate: true } }),
+    prisma.session.findMany({ select: { id: true, label: true, startDate: true } }),
     prisma.paymentAttempt.findMany({
       where: {
         status: "SUCCESS",
@@ -154,7 +154,7 @@ async function listReceipts(studentId) {
           include: {
             feeAccount: {
               include: {
-                ledgerEntries: { include: { semester: { select: { name: true, academicYearId: true } } } },
+                ledgerEntries: { include: { semester: { select: { name: true, sessionId: true } } } },
               },
             },
           },
@@ -216,7 +216,7 @@ async function getProfile(studentId) {
   }
 
   const [years, hostelRates] = await Promise.all([
-    prisma.academicYear.findMany({
+    prisma.session.findMany({
       select: { id: true, label: true, startDate: true },
     }),
     prisma.hostelRate.findMany({
@@ -291,7 +291,7 @@ async function getProfile(studentId) {
       prisma.feeStructure.findMany({
         where: {
           courseId: student.courseId,
-          academicYearId: student.academicYearId,
+          sessionId: student.sessionId,
           component: "ACADEMIC_FEE",
         },
         include: { semester: { select: { name: true } } },
@@ -299,44 +299,24 @@ async function getProfile(studentId) {
       prisma.semester.findMany({
         select: {
           name: true,
-          academicYearId: true,
+          sessionId: true,
           dueDate: true,
         },
       }),
     ]);
 
-    const orderedYears = [...years].sort(
-      (a, b) =>
-        new Date(a.startDate) - new Date(b.startDate) ||
-        String(a.label).localeCompare(String(b.label))
-    );
-
-    const currentIndex = orderedYears.findIndex(
-      (year) => year.id === student.academicYearId
-    );
-
     for (const number of missing) {
       const studyYear = Math.ceil(number / 2);
-      const term = number % 2 === 1 ? 0 : 1;
+      const semesterName = `Semester ${number}`;
 
       const structure = structures.find(
         (row) =>
           row.studyYear === studyYear &&
-          termOrder(row.semester.name) === term
+          row.semester.name === semesterName
       );
-
-      const targetYear =
-        currentIndex >= 0
-          ? orderedYears[currentIndex + (studyYear - student.studyYear)]
-          : null;
-
-      const calendar = targetYear
-        ? calendarSemesters.find(
-            (item) =>
-              item.academicYearId === targetYear.id &&
-              termOrder(item.name) === term
-          )
-        : null;
+      const calendar = calendarSemesters.find(
+        (item) => item.sessionId === student.sessionId && item.name === semesterName
+      );
 
       semesters.set(number, {
         semester: number,

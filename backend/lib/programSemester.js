@@ -22,9 +22,14 @@ function orderedYears(years) {
 }
 
 function programSemesterForLine(student, years, semester) {
+  // The current schema stores numbered semesters inside a Session. Older
+  // records used a separate AcademicYear model and odd/even term names.
+  const numberedSemester = String(semester?.name || "").match(/^semester\s+(\d+)$/i);
+  if (numberedSemester) return Number(numberedSemester[1]);
+
   const ordered = orderedYears(years);
-  const currentIndex = ordered.findIndex((item) => item.id === student.academicYearId);
-  const feeIndex = ordered.findIndex((item) => item.id === semester.academicYearId);
+  const currentIndex = ordered.findIndex((item) => item.id === student.sessionId);
+  const feeIndex = ordered.findIndex((item) => item.id === semester.sessionId);
   const studyYear = currentIndex >= 0 && feeIndex >= 0
     ? student.studyYear - (currentIndex - feeIndex)
     : student.studyYear;

@@ -172,7 +172,7 @@ export function StudentDashboardScreen({ token, student, onSignOut }: StudentDas
               <SummaryMetricCard label="PAID TO DATE" value={formatCurrency(paidTotal)} />
               <SummaryMetricCard label="REMAINING BALANCE" value={formatCurrency(remainingBalance)} />
             </View>
-            {fees.length > 0 ? (
+            {/* {fees.length > 0 ? (
               <View style={styles.semesterBalances}>
                 {fees.map(fee => (
                   <View key={fee.semester} style={styles.semesterBalanceRow}>
@@ -196,7 +196,7 @@ export function StudentDashboardScreen({ token, student, onSignOut }: StudentDas
                   </Text>
                 </View>
               </View>
-            ) : null}
+            ) : null} */}
 
             <DashboardTabs
               activeTab={activeTab}

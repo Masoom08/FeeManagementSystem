@@ -1176,8 +1176,9 @@ export function AdminManagementModal({
                   <span>Component</span>
                   <select name="component" required>
                     <option value="ACADEMIC_FEE">Academic fee</option>
+                    <option value="EXAM_FEE">Exam fee</option>
                     <option value="ACADEMIC_CAUTION">
-                      Academic caution deposit
+                      Security money (first semester only)
                     </option>
                     <option value="HOSTEL_FEE">Hostel fee</option>
                     <option value="HOSTEL_SECURITY">

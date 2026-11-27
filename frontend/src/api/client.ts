@@ -44,7 +44,7 @@ export type ApiFeeStructure = {
   courseId: number
   sessionId: number
   semesterId: number
-  component: 'ACADEMIC_FEE' | 'ACADEMIC_CAUTION' | 'HOSTEL_FEE' | 'HOSTEL_SECURITY'
+  component: 'ACADEMIC_FEE' | 'EXAM_FEE' | 'ACADEMIC_CAUTION' | 'HOSTEL_FEE' | 'HOSTEL_SECURITY'
   studyYear: number
   amount: number
 }

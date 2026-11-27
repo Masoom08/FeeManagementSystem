@@ -148,6 +148,20 @@ async function assertFeeStructure(data) {
   if (!semester || semester.sessionId !== data.sessionId) {
     throw notFound("SEMESTER_NOT_FOUND");
   }
+
+  const number = semesterNumber(semester.name);
+  const oddSemester = number ? number % 2 === 1 : semester.name === "Ist Semester";
+  const firstSemester = number ? number === 1 : semester.name === "Ist Semester" && data.studyYear === 1;
+  if (data.component === "EXAM_FEE" && !oddSemester) {
+    throw badRequest("EXAM_FEE_ODD_SEMESTER_ONLY", [
+      { path: "semesterId", message: "Exam fees can only be configured for odd semesters." },
+    ]);
+  }
+  if (data.component === "ACADEMIC_CAUTION" && (data.studyYear !== 1 || !firstSemester)) {
+    throw badRequest("SECURITY_MONEY_FIRST_SEMESTER_ONLY", [
+      { path: "semesterId", message: "Security money can only be configured for the first semester." },
+    ]);
+  }
 }
 
 async function createFeeStructure(data) {

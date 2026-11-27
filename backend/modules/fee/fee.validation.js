@@ -54,7 +54,7 @@ const createFeeStructureBody = z
     sessionId: z.number().int().positive(),
     semesterId: z.number().int().positive(),
     component: z.enum(
-      ["ACADEMIC_FEE", "ACADEMIC_CAUTION", "HOSTEL_FEE", "HOSTEL_SECURITY"],
+      ["ACADEMIC_FEE", "EXAM_FEE", "ACADEMIC_CAUTION", "HOSTEL_FEE", "HOSTEL_SECURITY"],
       {
         errorMap: () => ({ message: "component must be a fee component" }),
       }

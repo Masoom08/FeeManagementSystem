@@ -15,7 +15,8 @@ const DELETE_LABELS = {
 
 const COMPONENT_LABELS = {
   ACADEMIC_FEE: "Academic fee",
-  ACADEMIC_CAUTION: "Academic caution",
+  EXAM_FEE: "Exam fee",
+  ACADEMIC_CAUTION: "Security money",
   HOSTEL_FEE: "Hostel fee",
   HOSTEL_SECURITY: "Hostel security",
 };

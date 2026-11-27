@@ -229,6 +229,52 @@ async function seedStructures(courses, sessions, semesters) {
             amount: course.fee,
           },
         });
+
+        if (semesterNumber % 2 === 1) {
+          await prisma.feeStructure.upsert({
+            where: {
+              courseId_sessionId_semesterId_component_studyYear: {
+                courseId: course.id,
+                sessionId: session.id,
+                semesterId: semester.id,
+                component: "EXAM_FEE",
+                studyYear,
+              },
+            },
+            update: {},
+            create: {
+              courseId: course.id,
+              sessionId: session.id,
+              semesterId: semester.id,
+              component: "EXAM_FEE",
+              studyYear,
+              amount: 1000,
+            },
+          });
+        }
+
+        if (semesterNumber === 1) {
+          await prisma.feeStructure.upsert({
+            where: {
+              courseId_sessionId_semesterId_component_studyYear: {
+                courseId: course.id,
+                sessionId: session.id,
+                semesterId: semester.id,
+                component: "ACADEMIC_CAUTION",
+                studyYear,
+              },
+            },
+            update: {},
+            create: {
+              courseId: course.id,
+              sessionId: session.id,
+              semesterId: semester.id,
+              component: "ACADEMIC_CAUTION",
+              studyYear,
+              amount: 5000,
+            },
+          });
+        }
       }
     }
   }

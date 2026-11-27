@@ -2,6 +2,11 @@ const { todayUTC } = require("../../lib/dates");
 
 const DEPOSIT_COMPONENTS = new Set(["ACADEMIC_CAUTION", "HOSTEL_SECURITY"]);
 
+function semesterNumber(name) {
+  const match = String(name).match(/(\d+)\s*$/);
+  return match ? Number(match[1]) : 0;
+}
+
 function productFor(component) {
   return component.startsWith("HOSTEL") ? "HOSTEL" : "ACADEMIC";
 }
@@ -35,6 +40,7 @@ async function assessStudent(tx, student, products) {
       semesterId: student.admissionSemesterId,
       studyYear: student.studyYear,
     },
+    include: { semester: { select: { name: true } } },
   });
 
   const applicable = structures.filter((row) => {
@@ -43,6 +49,15 @@ async function assessStudent(tx, student, products) {
       return false;
     }
     if (DEPOSIT_COMPONENTS.has(row.component) && student.studyYear !== 1) {
+      return false;
+    }
+    const number = semesterNumber(row.semester.name);
+    const oddSemester = number ? number % 2 === 1 : row.semester.name === "Ist Semester";
+    const firstSemester = number ? number === 1 : row.semester.name === "Ist Semester" && student.studyYear === 1;
+    if (row.component === "EXAM_FEE" && !oddSemester) {
+      return false;
+    }
+    if (row.component === "ACADEMIC_CAUTION" && (student.studyYear !== 1 || !firstSemester)) {
       return false;
     }
     if (product === "HOSTEL" && !student.isHosteller) {

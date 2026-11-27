@@ -30,6 +30,7 @@ enum FeeProduct {
 
 enum FeeComponent {
   ACADEMIC_FEE
+  EXAM_FEE
   ACADEMIC_CAUTION
   HOSTEL_FEE
   HOSTEL_SECURITY

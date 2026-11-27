@@ -1,5 +1,6 @@
 import { useState } from 'react'
-import { Alert, Image, KeyboardAvoidingView, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native'
+import { Alert, Image, KeyboardAvoidingView, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native'
+import { AppText, appFontFamily } from '../../components/AppText'
 import { PrimaryButton } from '../../components/PrimaryButton'
 import { colors } from '../../theme/colors'
 import { requestStudentOtp, verifyStudentOtp } from '../../services/studentApi'
@@ -46,39 +47,39 @@ export function LoginScreen({ onAuthenticated }: LoginScreenProps) {
       <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
         <View style={styles.brandRow}>
           <Image source={require('../../../assets/logo-iccmrt.png')} accessibilityLabel="ICCMRT logo" resizeMode="contain" style={styles.logo}/>
-          <View><Text style={styles.brandName}>ICCMRT Fee Portal</Text><Text style={styles.brandCaption}>STUDENT FEE PORTAL</Text></View>
+          <View><AppText style={styles.brandName}>ICCMRT Fee Portal</AppText><AppText style={styles.brandCaption}>STUDENT FEE PORTAL</AppText></View>
         </View>
 
         <View style={styles.hero}>
-          <Text style={styles.kicker}>STUDENT ACCESS</Text>
-          <Text style={styles.title}>{otpStep ? 'Verify your number' : 'Your fees, clear and simple.'}</Text>
-              <Text style={styles.copy}>{otpStep ? `Enter the 6-digit code sent to +91 ${phone}.` : 'Sign in securely to view semester fees, payment dates, and receipts.'}</Text>
+          <AppText style={styles.kicker}>STUDENT ACCESS</AppText>
+          <AppText style={styles.title}>{otpStep ? 'Verify your number' : 'Your fees, clear and simple.'}</AppText>
+              <AppText style={styles.copy}>{otpStep ? `Enter the 6-digit code sent to +91 ${phone}.` : 'Sign in securely to view semester fees, payment dates, and receipts.'}</AppText>
         </View>
 
         <View style={styles.card}>
           {otpStep ? (
             <>
-              <Text style={styles.fieldLabel}>ONE-TIME PASSWORD</Text>
+              <AppText style={styles.fieldLabel}>ONE-TIME PASSWORD</AppText>
               <TextInput value={otp} onChangeText={value => setOtp(value.replace(/\D/g, '').slice(0, 6))} keyboardType="number-pad" maxLength={6} placeholder="• • • • • •" placeholderTextColor="#aab4c2" style={[styles.input, styles.otpInput]} accessibilityLabel="One-time password" />
-              {developmentOtp ? <Text style={styles.demoHint}>Development OTP: <Text style={styles.demoCode}>{developmentOtp}</Text></Text> : null}
-              {error ? <Text style={styles.error}>{error}</Text> : null}
+              {developmentOtp ? <AppText style={styles.demoHint}>Development OTP: <AppText style={styles.demoCode}>{developmentOtp}</AppText></AppText> : null}
+              {error ? <AppText style={styles.error}>{error}</AppText> : null}
               <PrimaryButton label={busy ? 'Verifying…' : 'Verify and continue'} onPress={verifyOtp} />
-              <Pressable onPress={() => { setOtpStep(false); setOtp('') }} style={styles.backLink}><Text style={styles.backLinkText}>← Change mobile number</Text></Pressable>
+              <Pressable onPress={() => { setOtpStep(false); setOtp('') }} style={styles.backLink}><AppText style={styles.backLinkText}>← Change mobile number</AppText></Pressable>
             </>
           ) : (
             <>
-              <Text style={styles.fieldLabel}>MOBILE NUMBER</Text>
+              <AppText style={styles.fieldLabel}>MOBILE NUMBER</AppText>
               <View style={styles.phoneInput}>
-                <Text style={styles.countryCode}>+91</Text><View style={styles.inputDivider}/>
+                <AppText style={styles.countryCode}>+91</AppText><View style={styles.inputDivider}/>
                 <TextInput value={phone} onChangeText={value => setPhone(value.replace(/\D/g, '').slice(0, 10))} keyboardType="phone-pad" maxLength={10} placeholder="10-digit mobile number" placeholderTextColor="#aab4c2" style={styles.phoneTextInput} accessibilityLabel="Mobile number" />
               </View>
-              {error ? <Text style={styles.error}>{error}</Text> : null}
+              {error ? <AppText style={styles.error}>{error}</AppText> : null}
               <PrimaryButton label={busy ? 'Sending…' : 'Continue with OTP'} onPress={requestOtp} />
             </>
           )}
-          <Text style={styles.loginFoot}>Your account details stay private and secure.</Text>
+          <AppText style={styles.loginFoot}>Your account details stay private and secure.</AppText>
         </View>
-        <Text style={styles.footer}>ICCMRT · Fee Management System</Text>
+        <AppText style={styles.footer}>ICCMRT · Fee Management System</AppText>
       </ScrollView>
     </KeyboardAvoidingView>
     </>
@@ -87,7 +88,7 @@ export function LoginScreen({ onAuthenticated }: LoginScreenProps) {
 
 const styles = StyleSheet.create({
   flex: { flex: 1 },
-  scroll: { flexGrow: 1, paddingHorizontal: 24, paddingTop: 24, paddingBottom: 24 },
+  scroll: { flexGrow: 1, width: '100%', maxWidth: 520, alignSelf: 'center', paddingHorizontal: 24, paddingTop: 24, paddingBottom: 24 },
   brandRow: { flexDirection: 'row', alignItems: 'center', gap: 11 },
   logo: { width: 42, height: 42, flex: 0 },
   brandName: { color: '#1d2d43', fontSize: 16, fontWeight: '800', letterSpacing: 0.1 },
@@ -101,8 +102,8 @@ const styles = StyleSheet.create({
   phoneInput: { height: 52, flexDirection: 'row', alignItems: 'center', paddingHorizontal: 14, borderWidth: 1, borderColor: '#dbe3ec', borderRadius: 10, backgroundColor: colors.surface },
   countryCode: { color: '#354b64', fontSize: 15, fontWeight: '700' },
   inputDivider: { height: 21, width: 1, backgroundColor: '#dfe5ed', marginHorizontal: 13 },
-  phoneTextInput: { flex: 1, height: '100%', color: '#1d2d43', fontSize: 15 },
-  input: { height: 52, paddingHorizontal: 14, borderWidth: 1, borderColor: '#dbe3ec', borderRadius: 10, color: '#1d2d43', fontSize: 16 },
+  phoneTextInput: { flex: 1, height: '100%', color: '#1d2d43', fontSize: 15, fontFamily: appFontFamily },
+  input: { height: 52, paddingHorizontal: 14, borderWidth: 1, borderColor: '#dbe3ec', borderRadius: 10, color: '#1d2d43', fontSize: 16, fontFamily: appFontFamily },
   otpInput: { textAlign: 'center', letterSpacing: 9, fontSize: 20, fontWeight: '700' },
   demoHint: { color: '#8793a2', fontSize: 13, marginTop: 10, marginBottom: 18 },
   demoCode: { color: '#315d87', fontWeight: '800', letterSpacing: 0.3 },

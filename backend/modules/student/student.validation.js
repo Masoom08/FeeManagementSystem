@@ -77,6 +77,12 @@ const searchQuery = z
   })
   .strict();
 
+const updateStudentYearBody = z.object({
+  isHosteller: z.boolean(),
+  hostelRateId: z.number().int().positive().nullable().optional(),
+}).strict();
+const academicYearParams = z.object({ id: z.coerce.number().int().positive(), sessionId: z.coerce.number().int().positive() }).strict();
+
 const importRowSchema = z
   .object({
     registrationNumber,
@@ -100,6 +106,8 @@ module.exports = {
   createStudentBody,
   updateStudentBody,
   searchQuery,
+  updateStudentYearBody,
+  academicYearParams,
   importRowSchema,
   idParams: idParams(),
 };

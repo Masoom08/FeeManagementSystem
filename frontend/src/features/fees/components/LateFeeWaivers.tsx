@@ -354,7 +354,7 @@ export function LateFeeWaivers({
       </div>
 
       <section className="panel waiver-list-panel">
-        <div className="waiver-list-heading">
+        <div className="waiver-list-heading mba-overdue-heading">
           <div>
             <h2>{activeTab} students with unpaid fees</h2>
             <p>

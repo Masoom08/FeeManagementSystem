@@ -6,6 +6,10 @@
     "orientation": "portrait",
     "userInterfaceStyle": "light",
     "scheme": "iccmrtfee",
+    "icon": "./assets/logo-iccmrt.png",
+    "web": {
+      "favicon": "./assets/logo-iccmrt.png"
+    },
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "in.edu.iccmrt.feeportal",
@@ -18,7 +22,8 @@
       "package": "in.edu.iccmrt.feeportal",
       "softwareKeyboardLayoutMode": "resize",
       "adaptiveIcon": {
-        "backgroundColor": "#123F75"
+        "foregroundImage": "./assets/logo-iccmrt.png",
+        "backgroundColor": "#FFFFFF"
       }
     }
   }

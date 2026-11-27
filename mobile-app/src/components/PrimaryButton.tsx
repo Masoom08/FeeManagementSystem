@@ -1,4 +1,5 @@
-import { Pressable, StyleSheet, Text } from 'react-native'
+import { Pressable, StyleSheet } from 'react-native'
+import { AppText } from './AppText'
 import { colors } from '../theme/colors'
 
 type PrimaryButtonProps = {
@@ -14,7 +15,7 @@ export function PrimaryButton({ label, onPress, disabled = false }: PrimaryButto
       disabled={disabled}
       style={({ pressed }) => [styles.button, (pressed || disabled) && styles.buttonPressed]}
     >
-      <Text style={styles.label}>{label}</Text>
+      <AppText style={styles.label}>{label}</AppText>
     </Pressable>
   )
 }

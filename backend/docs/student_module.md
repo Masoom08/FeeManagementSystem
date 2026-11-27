@@ -1,5 +1,34 @@
 # Student module
 
+## Session-by-session academic and hostel details
+
+Student records include an `academicYears` array. Each entry identifies its
+session, study year, hostel status, and optional hostel rate. For example:
+
+```json
+{"academicYears":[
+  {"sessionId":11,"studyYear":1,"session":{"label":"2022-23"},"isHosteller":true,"hostelRate":{"condition":"Non-AC","occupancy":"Double seater"}},
+  {"sessionId":12,"studyYear":2,"session":{"label":"2023-24"},"isHosteller":false,"hostelRate":null}
+]}
+```
+
+Super admins can set a student's status for an individual session:
+
+```http
+PATCH /api/students/123/academic-years/11
+Content-Type: application/json
+Authorization: Bearer <token>
+```
+
+```json
+{"isHosteller":true,"hostelRateId":4}
+```
+
+Set `isHosteller` to `false` to clear that session's hostel rate. The student's
+existing `isHosteller` field remains a compatibility mirror of their current
+session. The mobile profile and staff student roster show the year-by-year
+history.
+
 Registration number is the unique key. The enrolment number is added on the same row. A valid workbook is previewed, then committed. The cases below are one complete example run.
 
 Base URL: `https://fee-management-icmrt.vercel.app`

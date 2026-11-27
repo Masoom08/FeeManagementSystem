@@ -22,6 +22,14 @@ receipt numbers, course fees, and six hostel rates. The third-year account
 Seed cleanup is limited to the explicitly listed demo registration numbers;
 unrelated student records are left untouched.
 
+The demo seed also creates four MBA (AKTU) students in batch 2022-24 with
+session-by-session residence cases: hosteller then non-hosteller, non-hosteller
+then hosteller, hosteller in both sessions, and non-hosteller in both sessions.
+`student_years` stores the student's study year and hostel status independently
+for every session. Student APIs include `academicYears`; update one session with
+`PATCH /api/students/:studentId/academic-years/:sessionId` and body
+`{"isHosteller":true}` (SUPERADMIN).
+
 The API listens on port 3000. The frontend can use
 `VITE_API_BASE_URL=http://localhost:3000/api`.
 

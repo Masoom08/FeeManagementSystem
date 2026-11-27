@@ -27,6 +27,7 @@ router.post("/imports/:id/commit", requireSuperAdmin, validate({ params: schemas
 router.post("/", requireSuperAdmin, validate({ body: schemas.createStudentBody }), controller.createStudent);
 router.get("/", validate({ query: schemas.searchQuery }), controller.searchStudents);
 router.get("/:id/delete-preview", requireSuperAdmin, validate({ params: schemas.idParams }), controller.previewStudentDelete);
+router.patch("/:id/academic-years/:sessionId", requireSuperAdmin, validate({ params: schemas.academicYearParams, body: schemas.updateStudentYearBody }), controller.updateStudentYear);
 router.get("/:id", validate({ params: schemas.idParams }), controller.getStudent);
 router.patch("/:id", requireSuperAdmin, validate({ params: schemas.idParams, body: schemas.updateStudentBody }), controller.updateStudent);
 router.delete("/:id", requireSuperAdmin, validate({ params: schemas.idParams }), controller.deleteStudent);

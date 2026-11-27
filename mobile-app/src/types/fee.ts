@@ -27,6 +27,7 @@ export type Student = {
   course: string
   batch: string
   year: number
+  academicYears?: { session: string; studyYear: number; isHosteller: boolean; hostelRate: { condition: string; occupancy: string } | null }[]
 }
 
 export type PaymentSession = { orderId: string; checkoutUrl: string }

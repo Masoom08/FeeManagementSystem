@@ -1,4 +1,6 @@
-import { Alert, Image, Modal, Pressable, StyleSheet, Text, View } from 'react-native'
+import { useState } from 'react'
+import { Alert, Image, Modal, Platform, Pressable, StyleSheet, View, useWindowDimensions } from 'react-native'
+import { AppText } from './AppText'
 import type { Student } from '../types/fee'
 import { colors } from '../theme/colors'
 
@@ -18,45 +20,84 @@ const studentDetails = (student: Student) => [
 ]
 
 export function StudentSidebar({ visible, student, onClose, onSignOut }: StudentSidebarProps) {
+  const [webSignOutVisible, setWebSignOutVisible] = useState(false)
+  const { width } = useWindowDimensions()
+  const persistentOnWeb = Platform.OS === 'web' && width >= 900
   const initials = student.name.split(/\s+/).map(part => part[0]).slice(0, 2).join('').toUpperCase()
   const details = studentDetails(student)
-  const confirmSignOut = () => Alert.alert('Are you sure?', 'Do you want to sign out of the student portal?', [
-    { text: 'Cancel', style: 'cancel' },
-    { text: 'Sign out', style: 'destructive', onPress: onSignOut },
-  ])
+  const confirmSignOut = () => {
+    if (Platform.OS === 'web') {
+      setWebSignOutVisible(true)
+      return
+    }
+    Alert.alert('Are you sure?', 'Do you want to sign out of the student portal?', [
+      { text: 'Cancel', style: 'cancel' },
+      { text: 'Sign out', style: 'destructive', onPress: onSignOut },
+    ])
+  }
 
-  return (
-    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
-      <View style={styles.overlay}>
-        <Pressable style={styles.backdrop} onPress={onClose} accessibilityRole="button" accessibilityLabel="Close student menu"/>
-        <View style={styles.sidebar}>
+  const panel = (
+    <View style={[styles.sidebar, persistentOnWeb && styles.webSidebar]}>
           <View style={styles.header}>
-            <View style={styles.brandRow}><Image source={require('../../assets/logo-iccmrt.png')} accessibilityLabel="ICCMRT logo" resizeMode="contain" style={styles.logo}/><View><Text style={styles.brandName}>ICCMRT Fee Portal</Text><Text style={styles.brandCaption}>STUDENT PORTAL</Text></View></View>
-            <Pressable onPress={onClose} accessibilityRole="button" accessibilityLabel="Close menu" style={styles.closeButton}><Text style={styles.closeText}>×</Text></Pressable>
+            <View style={styles.brandRow}><Image source={require('../../assets/logo-iccmrt.png')} accessibilityLabel="ICCMRT logo" resizeMode="contain" style={styles.logo}/><View><AppText style={styles.brandName}>ICCMRT Fee Portal</AppText><AppText style={styles.brandCaption}>STUDENT PORTAL</AppText></View></View>
+            {!persistentOnWeb && <Pressable onPress={onClose} accessibilityRole="button" accessibilityLabel="Close menu" style={styles.closeButton}><AppText style={styles.closeText}>×</AppText></Pressable>}
           </View>
 
           <View style={styles.profileCard}>
-            <View style={styles.avatar}><Text style={styles.avatarText}>{initials}</Text></View>
-            <Text style={styles.studentName}>{student.name}</Text>
-            <Text style={styles.studentLabel}>Student account</Text>
+            <View style={styles.avatar}><AppText style={styles.avatarText}>{initials}</AppText></View>
+            <AppText style={styles.studentName}>{student.name}</AppText>
+            <AppText style={styles.studentLabel}>Student account</AppText>
           </View>
 
-          <Text style={styles.sectionLabel}>STUDENT DETAILS</Text>
+          <AppText style={styles.sectionLabel}>STUDENT DETAILS</AppText>
           <View style={styles.detailsCard}>
             {details.map((detail, index) => <View key={detail.label} style={[styles.detailRow, index === details.length - 1 && styles.lastDetailRow]}>
-              <Text style={styles.detailLabel}>{detail.label}</Text><Text selectable style={styles.detailValue}>{detail.value}</Text>
+              <AppText style={styles.detailLabel}>{detail.label}</AppText><AppText selectable style={styles.detailValue}>{detail.value}</AppText>
             </View>)}
           </View>
 
           <View style={styles.footer}>
             <Pressable onPress={confirmSignOut} accessibilityRole="button" style={({ pressed }) => [styles.signOutButton, pressed && styles.signOutPressed]}>
-              <Text style={styles.signOutIcon}>↪</Text><Text style={styles.signOutText}>Sign out</Text>
+              <AppText style={styles.signOutIcon}>↪</AppText><AppText style={styles.signOutText}>Sign out</AppText>
             </Pressable>
-            <Text style={styles.version}>ICCMRT Fee Management</Text>
+            <AppText style={styles.version}>ICCMRT Fee Management</AppText>
+          </View>
+    </View>
+  )
+
+  const webSignOutDialog = Platform.OS === 'web' ? (
+    <Modal visible={webSignOutVisible} transparent animationType="fade" onRequestClose={() => setWebSignOutVisible(false)}>
+      <View style={styles.confirmOverlay}>
+        <Pressable style={styles.confirmBackdrop} onPress={() => setWebSignOutVisible(false)} accessibilityRole="button" accessibilityLabel="Cancel sign out" />
+        <View style={styles.confirmCard} accessibilityRole="alert">
+          <View style={styles.confirmIcon}><AppText style={styles.confirmIconText}>?</AppText></View>
+          <AppText style={styles.confirmTitle}>Are you sure?</AppText>
+          <AppText style={styles.confirmMessage}>Do you want to sign out of the student portal?</AppText>
+          <View style={styles.confirmActions}>
+            <Pressable onPress={() => setWebSignOutVisible(false)} accessibilityRole="button" style={({ pressed }) => [styles.cancelButton, pressed && styles.cancelPressed]}>
+              <AppText style={styles.cancelButtonText}>Cancel</AppText>
+            </Pressable>
+            <Pressable onPress={() => { setWebSignOutVisible(false); onSignOut() }} accessibilityRole="button" style={({ pressed }) => [styles.confirmSignOutButton, pressed && styles.confirmSignOutPressed]}>
+              <AppText style={styles.confirmSignOutText}>Sign out</AppText>
+            </Pressable>
           </View>
         </View>
       </View>
     </Modal>
+  ) : null
+
+  if (persistentOnWeb) return <><View style={styles.webSidebarFrame}>{panel}</View>{webSignOutDialog}</>
+
+  return (
+    <>
+      <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
+        <View style={styles.overlay}>
+          <Pressable style={styles.backdrop} onPress={onClose} accessibilityRole="button" accessibilityLabel="Close student menu"/>
+          {panel}
+        </View>
+      </Modal>
+      {webSignOutDialog}
+    </>
   )
 }
 
@@ -64,6 +105,22 @@ const styles = StyleSheet.create({
   overlay: { flex: 1, flexDirection: 'row' },
   backdrop: { ...StyleSheet.absoluteFill, backgroundColor: 'rgba(12, 29, 49, 0.48)' },
   sidebar: { width: '84%', maxWidth: 350, height: '100%', paddingHorizontal: 19, paddingTop: 16, paddingBottom: 18, backgroundColor: colors.surface, borderTopRightRadius: 18, borderBottomRightRadius: 18, elevation: 15, shadowColor: '#10243a', shadowOpacity: 0.2, shadowRadius: 20, shadowOffset: { width: 4, height: 0 } },
+  webSidebarFrame: { width: 280, flexShrink: 0, alignSelf: 'stretch', backgroundColor: colors.surface, borderRightWidth: 1, borderRightColor: colors.border },
+  webSidebar: { width: '100%', maxWidth: 280, borderTopRightRadius: 0, borderBottomRightRadius: 0, elevation: 0, shadowOpacity: 0 },
+  confirmOverlay: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 20 },
+  confirmBackdrop: { ...StyleSheet.absoluteFill, backgroundColor: 'rgba(18, 37, 59, 0.42)' },
+  confirmCard: { width: '100%', maxWidth: 390, padding: 26, borderRadius: 18, borderWidth: 1, borderColor: '#e6ebf1', backgroundColor: colors.surface, alignItems: 'center', shadowColor: '#132b43', shadowOpacity: 0.18, shadowRadius: 28, shadowOffset: { width: 0, height: 12 }, elevation: 12 },
+  confirmIcon: { width: 48, height: 48, borderRadius: 24, alignItems: 'center', justifyContent: 'center', backgroundColor: '#eef3f8' },
+  confirmIconText: { color: colors.navy, fontSize: 23, fontWeight: '700' },
+  confirmTitle: { marginTop: 16, color: colors.navyText, fontSize: 19, fontWeight: '700', textAlign: 'center' },
+  confirmMessage: { marginTop: 8, color: colors.muted, fontSize: 14, lineHeight: 21, textAlign: 'center' },
+  confirmActions: { width: '100%', flexDirection: 'row', gap: 10, marginTop: 24 },
+  cancelButton: { flex: 1, minHeight: 44, alignItems: 'center', justifyContent: 'center', borderRadius: 10, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.surface },
+  cancelPressed: { backgroundColor: '#f3f6f9' },
+  cancelButtonText: { color: '#52657a', fontSize: 14, fontWeight: '700' },
+  confirmSignOutButton: { flex: 1, minHeight: 44, alignItems: 'center', justifyContent: 'center', borderRadius: 10, backgroundColor: colors.redAccent },
+  confirmSignOutPressed: { opacity: 0.88 },
+  confirmSignOutText: { color: '#ffffff', fontSize: 14, fontWeight: '700' },
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   brandRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   logo: { width: 37, height: 37, flex: 0 },

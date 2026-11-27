@@ -1,14 +1,15 @@
-import { Image, Pressable, StyleSheet, Text, View } from 'react-native'
+import { Image, Pressable, StyleSheet, View } from 'react-native'
+import { AppText } from './AppText'
 import { colors } from '../theme/colors'
 
-export function DashboardHeader({ firstName, onOpenMenu }: { firstName: string; onOpenMenu: () => void }) {
+export function DashboardHeader({ firstName, onOpenMenu, showMenu = true }: { firstName: string; onOpenMenu: () => void; showMenu?: boolean }) {
   return (
     <View style={styles.bar}>
-      <Pressable onPress={onOpenMenu} accessibilityRole="button" accessibilityLabel="Open student menu" style={styles.menuButton}>
+      {showMenu && <Pressable onPress={onOpenMenu} accessibilityRole="button" accessibilityLabel="Open student menu" style={styles.menuButton}>
         <View style={styles.menuLine}/><View style={styles.menuLine}/><View style={styles.menuLine}/>
-      </Pressable>
+      </Pressable>}
       <Image source={require('../../assets/logo-iccmrt.png')} accessibilityLabel="ICCMRT logo" style={styles.logo} resizeMode="contain"/>
-      <View style={styles.brandCopy}><Text style={styles.appName} numberOfLines={1}>ICCMRT Fee Portal</Text><Text style={styles.greeting} numberOfLines={1}>Welcome back, {firstName}</Text></View>
+      <View style={styles.brandCopy}><AppText style={styles.appName} numberOfLines={1}>ICCMRT Fee Portal</AppText><AppText style={styles.greeting} numberOfLines={1}>Welcome back, {firstName}</AppText></View>
     </View>
   )
 }

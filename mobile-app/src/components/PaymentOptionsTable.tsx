@@ -1,4 +1,5 @@
-import { Pressable, ScrollView, StyleSheet, Text, TextInput, View, useWindowDimensions } from 'react-native'
+import { Pressable, StyleSheet, TextInput, View, useWindowDimensions } from 'react-native'
+import { AppText, appFontFamily } from './AppText'
 import { useState } from 'react'
 import { FullPaymentBreakdown, type PaymentBreakdownLine } from './FullPaymentBreakdown'
 import type { SemesterFee } from '../types/fee'
@@ -31,16 +32,16 @@ export function PaymentOptionsTable({ currentFee, fullPaymentAmount, fullPayment
   if (width < 600) {
     return <View style={styles.mobileList}>
       <View style={styles.mobileCard}>
-        <View style={styles.mobileCardTop}><View><View style={styles.currentOptionTitle}><Text style={styles.mobileTitle}>Current semester</Text><Text style={styles.currentTag}>CURRENT</Text></View><Text style={styles.secondaryText}>{currentFee ? `Semester ${currentFee.semester}${currentFee.dueDate ? ` · due ${currentFee.dueDate}` : ''}` : 'No current balance due'}</Text></View><Text style={[styles.mobileAmount, currentBalance > 0 && styles.dueAmount]}>{formatCurrency(currentBalance)}</Text></View>
+        <View style={styles.mobileCardTop}><View><View style={styles.currentOptionTitle}><AppText style={styles.mobileTitle}>Current semester</AppText><AppText style={styles.currentTag}>CURRENT</AppText></View><AppText style={styles.secondaryText}>{currentFee ? `Semester ${currentFee.semester}${currentFee.dueDate ? ` · due ${currentFee.dueDate}` : ''}` : 'No current balance due'}</AppText></View><AppText style={[styles.mobileAmount, currentBalance > 0 && styles.dueAmount]}>{formatCurrency(currentBalance)}</AppText></View>
         <PayButton label="Pay current semester" enabled={currentEnabled} loading={isPaying} onPress={onPayCurrent} compact/>
       </View>
       <View style={styles.mobileCard}>
-        <View style={styles.mobileCardTop}><View><Text style={styles.mobileTitle}>Full payment</Text><Text style={styles.secondaryText}>{payableSemesters.length ? `Semesters ${payableSemesters.join(', ')}` : 'No remaining balance'}</Text></View><Text style={styles.mobileAmount}>{formatCurrency(fullPaymentAmount)}</Text></View>
+        <View style={styles.mobileCardTop}><View><AppText style={styles.mobileTitle}>Full payment</AppText><AppText style={styles.secondaryText}>{payableSemesters.length ? `Semesters ${payableSemesters.join(', ')}` : 'No remaining balance'}</AppText></View><AppText style={styles.mobileAmount}>{formatCurrency(fullPaymentAmount)}</AppText></View>
         <FullPaymentBreakdown lines={fullPaymentLines} total={fullPaymentLines.reduce((sum, line) => sum + line.amount, 0)} dueNow={fullPaymentAmount}/>
         <PayButton label="Pay full amount" enabled={fullEnabled} loading={isPaying} onPress={onPayFull} compact/>
       </View>
       <View style={styles.mobileCard}>
-        <View style={styles.mobileCardTop}><View><Text style={styles.mobileTitle}>Custom payment</Text><Text style={styles.secondaryText}>{fullPaymentAmount > 0 ? `Choose any amount up to the remaining balance, ${formatCurrency(fullPaymentAmount)}` : 'No remaining balance'}</Text></View></View>
+        <View style={styles.mobileCardTop}><View><AppText style={styles.mobileTitle}>Custom payment</AppText><AppText style={styles.secondaryText}>{fullPaymentAmount > 0 ? `Choose any amount up to the remaining balance, ${formatCurrency(fullPaymentAmount)}` : 'No remaining balance'}</AppText></View></View>
         <TextInput
           value={customAmount}
           onChangeText={value => onCustomAmountChange(value.replace(/\D/g, ''))}
@@ -56,50 +57,46 @@ export function PaymentOptionsTable({ currentFee, fullPaymentAmount, fullPayment
           accessibilityLabel="Custom payment amount in rupees"
           accessibilityHint={`Enter an amount up to ${formatCurrency(fullPaymentAmount)}`}
         />
-        {customAmount !== '' && <Text style={styles.amountPreview}>Amount entered: {formatCurrency(customValue)}</Text>}
-        {customAmount !== '' && customValue > fullPaymentAmount && <Text style={styles.validationText}>Amount cannot exceed the remaining balance, {formatCurrency(fullPaymentAmount)}.</Text>}
+        {customAmount !== '' && <AppText style={styles.amountPreview}>Amount entered: {formatCurrency(customValue)}</AppText>}
+        {customAmount !== '' && customValue > fullPaymentAmount && <AppText style={styles.validationText}>Amount cannot exceed the remaining balance, {formatCurrency(fullPaymentAmount)}.</AppText>}
         <PayButton label="Pay custom amount" enabled={customEnabled} loading={isPaying} onPress={onPayCustom} compact/>
       </View>
     </View>
   }
 
   return (
-    <View style={styles.desktopStack}>
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator
-        keyboardShouldPersistTaps="handled"
-        contentContainerStyle={styles.horizontalContent}
-      >
-        <View style={styles.table}>
-          {/* Keep all your existing table content unchanged */}
-        </View>
-      </ScrollView>
-
-      {customAmount !== '' && customValue > fullPaymentAmount ? (
-        <Text style={styles.validationText}>
-          Amount cannot exceed the remaining balance, {formatCurrency(fullPaymentAmount)}.
-        </Text>
-      ) : null}
-
-      <View style={styles.desktopBreakdown}>
-        <Text style={styles.breakdownTitle}>Full payment breakdown</Text>
-        <FullPaymentBreakdown
-          lines={fullPaymentLines}
-          total={fullPaymentLines.reduce((sum, line) => sum + line.amount, 0)}
-          dueNow={fullPaymentAmount}
-        />
+    <View style={styles.desktopGrid}>
+      <View style={[styles.mobileCard, styles.desktopCard]}>
+        <View style={styles.desktopCardTop}><View style={styles.currentOptionTitle}><AppText style={styles.mobileTitle}>Current semester</AppText><AppText style={styles.currentTag}>CURRENT</AppText></View><AppText style={styles.secondaryText}>{currentFee ? `Semester ${currentFee.semester}${currentFee.dueDate ? ` · due ${currentFee.dueDate}` : ''}` : 'No current balance due'}</AppText></View>
+        <AppText style={[styles.desktopAmount, currentBalance > 0 && styles.dueAmount]}>{formatCurrency(currentBalance)}</AppText>
+        <PayButton label="Pay current semester" enabled={currentEnabled} loading={isPaying} onPress={onPayCurrent} compact/>
+      </View>
+      <View style={[styles.mobileCard, styles.desktopCard]}>
+        <View style={styles.desktopCardTop}><AppText style={styles.mobileTitle}>Full payment</AppText><AppText style={styles.secondaryText}>{payableSemesters.length ? `Semesters ${payableSemesters.join(', ')}` : 'No remaining balance'}</AppText></View>
+        <AppText style={styles.desktopAmount}>{formatCurrency(fullPaymentAmount)}</AppText>
+        <FullPaymentBreakdown lines={fullPaymentLines} total={fullPaymentLines.reduce((sum, line) => sum + line.amount, 0)} dueNow={fullPaymentAmount}/>
+        <PayButton label="Pay full amount" enabled={fullEnabled} loading={isPaying} onPress={onPayFull} compact/>
+      </View>
+      <View style={[styles.mobileCard, styles.desktopCard]}>
+        <View style={styles.desktopCardTop}><AppText style={styles.mobileTitle}>Custom payment</AppText><AppText style={styles.secondaryText}>{fullPaymentAmount > 0 ? `Choose any amount up to ${formatCurrency(fullPaymentAmount)}` : 'No remaining balance'}</AppText></View>
+        <TextInput value={customAmount} onChangeText={value => onCustomAmountChange(value.replace(/\D/g, ''))} keyboardType="number-pad" returnKeyType="done" maxLength={String(Math.floor(fullPaymentAmount)).length} placeholder="Enter amount in rupees" placeholderTextColor="#718096" selectionColor={colors.blue} onFocus={() => { setIsInputFocused(true); onCustomAmountFocusChange(true) }} onBlur={() => { setIsInputFocused(false); onCustomAmountFocusChange(false) }} style={[styles.customAmountInput, isInputFocused && styles.customAmountInputFocused]} accessibilityLabel="Custom payment amount in rupees" accessibilityHint={`Enter an amount up to ${formatCurrency(fullPaymentAmount)}`}/>
+        {customAmount !== '' && <AppText style={styles.amountPreview}>Amount entered: {formatCurrency(customValue)}</AppText>}
+        {customAmount !== '' && customValue > fullPaymentAmount && <AppText style={styles.validationText}>Amount cannot exceed the remaining balance, {formatCurrency(fullPaymentAmount)}.</AppText>}
+        <PayButton label="Pay custom amount" enabled={customEnabled} loading={isPaying} onPress={onPayCustom} compact/>
       </View>
     </View>
   )
 }
 
 function PayButton({ label, enabled, loading, onPress, compact = false }: { label: string; enabled: boolean; loading: boolean; onPress: () => void; compact?: boolean }) {
-  return <Pressable onPress={onPress} disabled={!enabled} style={({ pressed }) => [styles.payButton, compact && styles.compactPayButton, !enabled && styles.disabledButton, pressed && enabled && styles.pressedButton]}><Text numberOfLines={1} style={[styles.payButtonText, !enabled && styles.disabledText]}>{loading ? 'Connecting…' : label}</Text></Pressable>
+  return <Pressable onPress={onPress} disabled={!enabled} style={({ pressed }) => [styles.payButton, compact && styles.compactPayButton, !enabled && styles.disabledButton, pressed && enabled && styles.pressedButton]}><AppText numberOfLines={1} style={[styles.payButtonText, !enabled && styles.disabledText]}>{loading ? 'Connecting…' : label}</AppText></Pressable>
 }
 
 const styles = StyleSheet.create({
-  desktopStack: { gap: 10 },
+  desktopGrid: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'stretch', gap: 12 },
+  desktopCard: { flexGrow: 1, flexBasis: 270, maxWidth: 365, padding: 18 },
+  desktopCardTop: { minHeight: 48 },
+  desktopAmount: { color: '#243851', fontSize: 21, fontWeight: '800' },
   desktopBreakdown: { padding: 14, borderWidth: 1, borderColor: colors.border, borderRadius: 10, backgroundColor: colors.surface },
   breakdownTitle: { color: '#293b50', fontSize: 14, fontWeight: '800' },
   horizontalContent: { minWidth: '100%' },
@@ -133,7 +130,7 @@ const styles = StyleSheet.create({
   dueAmount: { color: colors.redAccent },
   compactPayButton: { minHeight: 40, width: '100%' },
   validationText: { color: colors.redAccent, fontSize: 11 },
-  customAmountInput: { minHeight: 48, paddingHorizontal: 12, borderWidth: 1, borderColor: '#aab9ca', borderRadius: 8, backgroundColor: '#ffffff', color: '#142c46', fontSize: 16, fontWeight: '700' },
+  customAmountInput: { minHeight: 48, paddingHorizontal: 12, borderWidth: 1, borderColor: '#aab9ca', borderRadius: 8, backgroundColor: '#ffffff', color: '#142c46', fontSize: 16, fontWeight: '700', fontFamily: appFontFamily },
   customAmountInputFocused: { borderColor: colors.blue, borderWidth: 2 },
   amountPreview: { color: '#243851', fontSize: 14, fontWeight: '700' },
 })

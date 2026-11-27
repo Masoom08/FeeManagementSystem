@@ -1,4 +1,5 @@
-import { StyleSheet, Text, View } from 'react-native'
+import { StyleSheet, View } from 'react-native'
+import { AppText } from './AppText'
 import { colors } from '../theme/colors'
 import { formatCurrency } from '../utils/formatCurrency'
 
@@ -14,17 +15,17 @@ export function FullPaymentBreakdown({ lines, total, dueNow }: { lines: PaymentB
       {lines.map(line => (
         <View key={line.label} style={styles.row}>
           <View style={styles.labelColumn}>
-            <Text style={styles.label}>{line.label}</Text>
-            {line.note ? <Text style={styles.note}>{line.note}</Text> : null}
+            <AppText style={styles.label}>{line.label}</AppText>
+            {line.note ? <AppText style={styles.note}>{line.note}</AppText> : null}
           </View>
-          <Text style={styles.amount}>{formatCurrency(line.amount)}</Text>
+          <AppText style={styles.amount}>{formatCurrency(line.amount)}</AppText>
         </View>
       ))}
       <View style={styles.totalRow}>
-        <Text style={styles.totalLabel}>Remaining balance</Text>
-        <Text style={styles.totalAmount}>{formatCurrency(total)}</Text>
+        <AppText style={styles.totalLabel}>Remaining balance</AppText>
+        <AppText style={styles.totalAmount}>{formatCurrency(total)}</AppText>
       </View>
-      {dueNow != null && dueNow !== total ? <Text style={styles.note}>Due now {formatCurrency(dueNow)}. Later semesters are not billed yet.</Text> : null}
+      {dueNow != null && dueNow !== total ? <AppText style={styles.note}>Due now {formatCurrency(dueNow)}. Later semesters are not billed yet.</AppText> : null}
     </View>
   )
 }

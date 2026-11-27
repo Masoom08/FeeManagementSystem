@@ -1,7 +1,10 @@
 import type { HostelSeatChoice } from '../components/HostelFeeCard'
 import type { PaymentReceipt, SemesterFee, Student } from '../types/fee'
+import { Platform } from 'react-native'
 
-const baseUrl = process.env.EXPO_PUBLIC_API_URL?.replace(/\/$/, '')
+const baseUrl = (Platform.OS === 'web'
+  ? process.env.EXPO_PUBLIC_WEB_API_URL || 'http://localhost:3000'
+  : process.env.EXPO_PUBLIC_API_URL)?.replace(/\/$/, '')
 const apiDebugEnabled = process.env.NODE_ENV !== 'production'
 
 async function request<T>(path: string, token?: string, init: RequestInit = {}): Promise<T> {
@@ -48,7 +51,7 @@ export async function verifyStudentOtp(phoneNumber: string, otp: string) {
 export type StudentPaymentStatus = { reference: string | null; status: 'PENDING' | 'SUCCESS' | 'FAILED'; amount: number; method: string; receiptNo: string | null }
 
 type StudentProfileResponse = {
-  student: Student
+  student: Student & { academicYears?: Student['academicYears'] }
   hostelOutstanding?: number
   hostelSeat?: HostelSeatChoice | null
   hostelRates?: HostelSeatChoice[]

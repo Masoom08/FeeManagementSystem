@@ -21,6 +21,11 @@ const updateStudent = asyncRoute(async (req, res) => {
   res.status(200).json({ success: true, data: student });
 });
 
+const updateStudentYear = asyncRoute(async (req, res) => {
+  const row = await studentService.updateStudentYear(req.params.id, req.params.sessionId, req.body);
+  res.status(200).json({ success: true, data: row });
+});
+
 const previewImport = asyncRoute(async (req, res) => {
   const batch = await studentService.previewImport(req.file);
   res.status(200).json({ success: true, data: batch });
@@ -46,6 +51,7 @@ module.exports = {
   searchStudents,
   getStudent,
   updateStudent,
+  updateStudentYear,
   previewImport,
   commitImport,
   previewStudentDelete,

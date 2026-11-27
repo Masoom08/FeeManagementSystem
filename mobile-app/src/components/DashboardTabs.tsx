@@ -1,4 +1,5 @@
-import { Pressable, StyleSheet, Text, View } from 'react-native'
+import { Pressable, StyleSheet, View } from 'react-native'
+import { AppText } from './AppText'
 import { colors } from '../theme/colors'
 
 export type DashboardTab = 'pay' | 'receipts'
@@ -15,7 +16,7 @@ export function DashboardTabs({ activeTab, receiptCount, onChange }: DashboardTa
 }
 
 function TabButton({ label, count, active, onPress, accessibilityLabel }: { label: string; count?: number; active: boolean; onPress: () => void; accessibilityLabel: string }) {
-  return <Pressable onPress={onPress} accessibilityRole="tab" accessibilityState={{ selected: active }} accessibilityLabel={accessibilityLabel} style={[styles.tab, active && styles.activeTab]}><Text style={[styles.tabText, active && styles.activeTabText]}>{label}</Text>{count !== undefined && <Text style={[styles.count, active && styles.activeCount]}>{count}</Text>}</Pressable>
+  return <Pressable onPress={onPress} accessibilityRole="tab" accessibilityState={{ selected: active }} accessibilityLabel={accessibilityLabel} style={[styles.tab, active && styles.activeTab]}><AppText style={[styles.tabText, active && styles.activeTabText]}>{label}</AppText>{count !== undefined && <AppText style={[styles.count, active && styles.activeCount]}>{count}</AppText>}</Pressable>
 }
 
 const styles = StyleSheet.create({

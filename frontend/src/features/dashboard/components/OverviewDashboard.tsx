@@ -5,6 +5,7 @@ import {
   api,
   type ApiCourseCollectionSummary,
   type ApiDashboardSummary,
+  type ApiPaymentHistoryRow,
 } from '../../../api/client'
 
 const currency = new Intl.NumberFormat('en-IN', {
@@ -14,13 +15,33 @@ const currency = new Intl.NumberFormat('en-IN', {
 })
 
 const courseColors = [
-  '#6655b7',
-  '#8e9fe4',
-  '#efb26f',
-  '#d9d8e7',
-  '#4d9878',
-  '#5b83ba',
+  '#dc2626',
+  '#2563eb',
+  '#16a34a',
+  '#f59e0b',
+  '#0f766e',
+  '#0891b2',
 ]
+
+type ChartPoint = { x: number; y: number }
+
+function smoothPath(points: ChartPoint[]) {
+  if (points.length < 2) return ''
+
+  return points.slice(1).reduce((path, point, index) => {
+    const previous = points[index]
+    const beforePrevious = points[index - 1] ?? previous
+    const next = points[index + 2] ?? point
+    const lowerY = Math.min(previous.y, point.y)
+    const upperY = Math.max(previous.y, point.y)
+    const controlOneX = previous.x + (point.x - beforePrevious.x) / 6
+    const controlOneY = Math.min(upperY, Math.max(lowerY, previous.y + (point.y - beforePrevious.y) / 6))
+    const controlTwoX = point.x - (next.x - previous.x) / 6
+    const controlTwoY = Math.min(upperY, Math.max(lowerY, point.y - (next.y - previous.y) / 6))
+
+    return `${path} C ${controlOneX},${controlOneY} ${controlTwoX},${controlTwoY} ${point.x},${point.y}`
+  }, `M ${points[0].x},${points[0].y}`)
+}
 
 type OverviewDashboardProps = {
   onNotice: (message: string) => void
@@ -38,6 +59,8 @@ export function OverviewDashboard({
     useState<ApiCourseCollectionSummary | null>(null)
   const [courseCollectionError, setCourseCollectionError] = useState('')
   const [refreshKey, setRefreshKey] = useState(0)
+  const [paymentHistory, setPaymentHistory] = useState<ApiPaymentHistoryRow[] | null>(null)
+  const [paymentHistoryError, setPaymentHistoryError] = useState('')
 
   useEffect(() => {
     let active = true
@@ -78,6 +101,22 @@ export function OverviewDashboard({
     }
   }, [refreshKey])
 
+  useEffect(() => {
+    let active = true
+
+    api.paymentHistory()
+      .then(rows => {
+        if (active) setPaymentHistory(rows)
+      })
+      .catch(() => {
+        if (active) setPaymentHistoryError('Semester payment history could not be loaded.')
+      })
+
+    return () => {
+      active = false
+    }
+  }, [])
+
   const displayValue = (value: number | undefined) =>
     value === undefined
       ? '—'
@@ -117,6 +156,46 @@ export function OverviewDashboard({
 
     return `conic-gradient(${segments.join(',')})`
   }, [courseCollections])
+
+  const semesterTrend = useMemo(() => {
+    const now = new Date()
+    const firstMonth = new Date(now.getFullYear(), now.getMonth() - 11, 1)
+    const months = Array.from({ length: 12 }, (_, index) => {
+      const date = new Date(firstMonth.getFullYear(), firstMonth.getMonth() + index, 1)
+      return {
+        key: `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`,
+        label: new Intl.DateTimeFormat('en-IN', { month: 'short' }).format(date),
+        odd: 0,
+        even: 0,
+      }
+    })
+    const monthByKey = new Map(months.map(month => [month.key, month]))
+
+    for (const row of paymentHistory ?? []) {
+      if (row.product !== 'ACADEMIC' || row.bucket !== 'DUES' || !row.semester) continue
+      const semesterNumber = Number(row.semester.match(/\d+/)?.[0])
+      if (!semesterNumber) continue
+
+      const paidDate = new Date(`${row.paidOn.slice(0, 10)}T00:00:00`)
+      if (Number.isNaN(paidDate.getTime())) continue
+
+      const key = `${paidDate.getFullYear()}-${String(paidDate.getMonth() + 1).padStart(2, '0')}`
+      const month = monthByKey.get(key)
+      if (month) month[semesterNumber % 2 === 1 ? 'odd' : 'even'] += row.amount
+    }
+
+    return months
+  }, [paymentHistory])
+
+  const semesterTrendMax = Math.max(0, ...semesterTrend.flatMap(month => [month.odd, month.even]))
+  const chartTop = 20
+  const chartBottom = 166
+  const chartLeft = 54
+  const chartRight = 704
+  const pointX = (index: number) => chartLeft + (index * (chartRight - chartLeft)) / (semesterTrend.length - 1)
+  const pointY = (amount: number) => chartBottom - (amount / (semesterTrendMax || 1)) * (chartBottom - chartTop)
+  const oddSemesterPoints = semesterTrend.map((month, index) => ({ x: pointX(index), y: pointY(month.odd) }))
+  const evenSemesterPoints = semesterTrend.map((month, index) => ({ x: pointX(index), y: pointY(month.even) }))
 
   const exportFeeReport = async () => {
     const today = new Date()
@@ -268,7 +347,7 @@ export function OverviewDashboard({
           <div className="panel-heading">
             <div>
               <h2>Collection overview</h2>
-              <p>Successful collections across all courses</p>
+              <p>Monthly successful academic collections by odd/even semester · last 12 months</p>
             </div>
           </div>
 
@@ -298,6 +377,53 @@ export function OverviewDashboard({
             </strong>
           </div>
 
+          <div className="semester-trend-content">
+
+        {paymentHistoryError ? (
+          <p className="semester-trend-message" role="alert">{paymentHistoryError}</p>
+        ) : paymentHistory === null ? (
+          <p className="semester-trend-message">Loading semester payments…</p>
+        ) : semesterTrendMax === 0 ? (
+          <p className="semester-trend-message">No academic semester payments recorded in the last 12 months.</p>
+        ) : (
+          <>
+            <svg className="semester-trend-svg" viewBox="0 0 720 220" role="img" aria-label="Monthly fees paid for odd and even semesters over the last 12 months">
+              {[0, 0.5, 1].map(ratio => {
+                const y = chartBottom - ratio * (chartBottom - chartTop)
+                const value = semesterTrendMax * ratio
+                return (
+                  <g key={ratio}>
+                    <line x1={chartLeft} x2={chartRight} y1={y} y2={y} className="semester-trend-gridline" />
+                    <text x={chartLeft - 9} y={y + 3} textAnchor="end" className="semester-trend-axis-label">{compactCurrency(value)}</text>
+                  </g>
+                )
+              })}
+
+              <path d={smoothPath(oddSemesterPoints)} className="semester-trend-line odd" />
+              <path d={smoothPath(evenSemesterPoints)} className="semester-trend-line even" />
+
+              {oddSemesterPoints.map((point, index) => (
+                <circle key={`odd-${index}`} cx={point.x} cy={point.y} r="3.5" className="semester-trend-point odd">
+                  <title>{`${semesterTrend[index].label}: Odd semesters ${currency.format(semesterTrend[index].odd)}`}</title>
+                </circle>
+              ))}
+              {evenSemesterPoints.map((point, index) => (
+                <circle key={`even-${index}`} cx={point.x} cy={point.y} r="3.5" className="semester-trend-point even">
+                  <title>{`${semesterTrend[index].label}: Even semesters ${currency.format(semesterTrend[index].even)}`}</title>
+                </circle>
+              ))}
+
+              {semesterTrend.map((month, index) => (
+                <text key={month.key} x={pointX(index)} y="198" textAnchor="middle" className="semester-trend-axis-label">{month.label}</text>
+              ))}
+            </svg>
+            <div className="semester-trend-legend" aria-label="Chart legend">
+              <span><i className="odd" /> Odd semesters</span>
+              <span><i className="even" /> Even semesters</span>
+            </div>
+          </>
+        )}
+          </div>
           {courseCollectionError && (
             <p className="course-collection-message" role="alert">
               {courseCollectionError}
@@ -384,6 +510,8 @@ export function OverviewDashboard({
           </div>
         </article>
       </section>
+
+
 
       <footer className="page-footer">
         <span>© 2026 ICCMRT Fee Management</span>

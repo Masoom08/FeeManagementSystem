@@ -12,6 +12,10 @@ const courseDefinitions = [
   { name: "MBA (AKTU)", code: "MBAAK", fee: 32000, affiliation: "AKTU", duration: 2 },
 ];
 const studentDefinitions = [
+  { registrationNumber: "ICM2022MBA01", name: "Aarav Sharma", phoneNumber: "9454716091", batch: 2022, courseName: "MBA (AKTU)", studyYear: 2, semesterNumber: 3, paid: false, hostelByYear: [true, false] },
+  { registrationNumber: "ICM2022MBA02", name: "Isha Verma", phoneNumber: "9454716092", batch: 2022, courseName: "MBA (AKTU)", studyYear: 2, semesterNumber: 3, paid: true, hostelByYear: [false, true] },
+  { registrationNumber: "ICM2022MBA03", name: "Kabir Singh", phoneNumber: "9454716093", batch: 2022, courseName: "MBA (AKTU)", studyYear: 2, semesterNumber: 4, paid: false, hostelByYear: [true, true] },
+  { registrationNumber: "ICM2022MBA04", name: "Meera Patel", phoneNumber: "9454716094", batch: 2022, courseName: "MBA (AKTU)", studyYear: 2, semesterNumber: 4, paid: true, hostelByYear: [false, false] },
   { registrationNumber: "ICM2026BAK01", name: "Masoom Singh", phoneNumber: "9454716083", batch: 2026, courseName: "BBA (AKTU)", studyYear: 1, semesterNumber: 1, paid: true },
   { registrationNumber: "ICM2026BAK02", name: "Demo Student 2", phoneNumber: "9454716084", batch: 2026, courseName: "BBA (AKTU)", studyYear: 1, semesterNumber: 1, paid: false },
   { registrationNumber: "ICM2025BLU01", name: "Demo Student 3", phoneNumber: "9454716085", batch: 2025, courseName: "BBA (LU)", studyYear: 2, semesterNumber: 3, paid: true },
@@ -126,7 +130,7 @@ async function seedCourses() {
 
 async function seedSessions() {
   const result = new Map();
-  for (const sessionYear of [2024, 2025, 2026, 2027, 2028]) {
+  for (const sessionYear of [2022, 2023, 2024, 2025, 2026, 2027, 2028]) {
     const label = `${sessionYear}-${String(sessionYear + 1).slice(-2)}`;
     const session = await prisma.session.upsert({
       where: { label },
@@ -145,7 +149,7 @@ async function seedSessions() {
 async function seedBatches(courses) {
   const result = new Map();
 
-  for (const startYear of [2024, 2025, 2026]) {
+  for (const startYear of [2022, 2024, 2025, 2026]) {
     for (const course of courses.values()) {
       const endYear = startYear + course.duration;
       const label = `${startYear}-${String(endYear).slice(-2)}`;
@@ -439,6 +443,8 @@ async function seedStudents(courses, batches, sessions, semesters) {
       );
     }
 
+    const seededHostelRate = await prisma.hostelRate.findFirst({ where: { condition: "Non-AC", occupancy: "Double seater" } });
+    const currentHostelStatus = Boolean(definition.hostelByYear?.[definition.studyYear - 1]);
     const student = await prisma.student.create({
       data: {
         registrationNumber: definition.registrationNumber,
@@ -454,11 +460,22 @@ async function seedStudents(courses, batches, sessions, semesters) {
         sessionId: currentSession.id,
         admissionSemesterId: admissionSemester.id,
         admissionType: "DIRECT",
-        isHosteller: false,
+        isHosteller: currentHostelStatus,
+        hostelRateId: currentHostelStatus ? seededHostelRate?.id ?? null : null,
         studyYear: definition.studyYear,
         status: "ACTIVE",
       },
     });
+
+    for (let academicYear = 1; academicYear <= definition.studyYear; academicYear += 1) {
+      const academicSession = sessions.get(batch + academicYear - 1);
+      const isHosteller = Boolean(definition.hostelByYear?.[academicYear - 1]);
+      await prisma.studentYear.upsert({
+        where: { studentId_sessionId: { studentId: student.id, sessionId: academicSession.id } },
+        update: { studyYear: academicYear, isHosteller, hostelRateId: isHosteller ? seededHostelRate?.id ?? null : null },
+        create: { studentId: student.id, sessionId: academicSession.id, studyYear: academicYear, isHosteller, hostelRateId: isHosteller ? seededHostelRate?.id ?? null : null },
+      });
+    }
 
     const accounts = new Map();
 

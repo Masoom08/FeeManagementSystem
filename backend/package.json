@@ -4,6 +4,7 @@
   "description": "",
   "main": "server.js",
   "scripts": {
+    "predev": "node scripts/prepare-prisma.js",
     "dev": "nodemon server.js",
     "start": "node server.js",
     "build": "prisma generate",

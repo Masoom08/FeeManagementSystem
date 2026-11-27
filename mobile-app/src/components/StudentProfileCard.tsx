@@ -1,4 +1,5 @@
-import { StyleSheet, Text, View } from 'react-native'
+import { StyleSheet, View } from 'react-native'
+import { AppText } from './AppText'
 import type { Student } from '../types/fee'
 import { colors } from '../theme/colors'
 
@@ -6,13 +7,16 @@ export function StudentProfileCard({ student }: { student: Student }) {
   const initials = student.name.split(/\s+/).map(part => part[0]).slice(0, 2).join('').toUpperCase()
   return (
     <View style={styles.card}>
-      <View style={styles.avatar}><Text style={styles.avatarText}>{initials}</Text></View>
+      <View style={styles.avatar}><AppText style={styles.avatarText}>{initials}</AppText></View>
       <View style={styles.identity}>
-        <Text style={styles.name}>{student.name}</Text>
-        <Text style={styles.meta}>{student.registrationNo} · {student.course}</Text>
-        <Text style={styles.meta}>Batch {student.batch} · Year {student.year}</Text>
+        <AppText style={styles.name}>{student.name}</AppText>
+        <AppText style={styles.meta}>{student.registrationNo} · {student.course}</AppText>
+        <AppText style={styles.meta}>Batch {student.batch} · Year {student.year}</AppText>
+        {student.academicYears?.map(year => (
+          <AppText key={year.session} style={styles.meta}>{year.session} � Year {year.studyYear} � {year.isHosteller ? 'Hosteller' : 'Non-hosteller'}</AppText>
+        ))}
       </View>
-      <View style={styles.verified}><Text style={styles.verifiedText}>✓</Text></View>
+      <View style={styles.verified}><AppText style={styles.verifiedText}>✓</AppText></View>
     </View>
   )
 }

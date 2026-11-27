@@ -1,5 +1,6 @@
 import { useState } from 'react'
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, View } from 'react-native'
+import { AppText } from '../../components/AppText'
 import { FullPaymentBreakdown, type PaymentBreakdownLine } from '../../components/FullPaymentBreakdown'
 import { confirmStudentPayment, PaymentConfirmError } from '../../services/studentApi'
 import { colors } from '../../theme/colors'
@@ -81,41 +82,41 @@ export function PaymentCheckoutScreen({ token, student, payment, onCancel, onRec
     <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
       <View style={styles.sectionHeading}>
         <View style={styles.headingCopy}>
-          <Text style={styles.sectionTitle}>{phase === 'success' ? 'Payment successful' : 'Checkout'}</Text>
-          <Text style={styles.sectionSubtitle}>{phase === 'success' ? 'Your fee payment has been recorded' : 'Review the amount and pay'}</Text>
+          <AppText style={styles.sectionTitle}>{phase === 'success' ? 'Payment successful' : 'Checkout'}</AppText>
+          <AppText style={styles.sectionSubtitle}>{phase === 'success' ? 'Your fee payment has been recorded' : 'Review the amount and pay'}</AppText>
         </View>
-        <Text style={styles.currencyTag}>INR</Text>
+        <AppText style={styles.currencyTag}>INR</AppText>
       </View>
 
       <View style={styles.card}>
-        <Text style={styles.amountLabel}>AMOUNT TO PAY</Text>
-        <Text style={styles.amount}>{formatCurrency(payment.amount)}</Text>
-        <Text style={styles.paymentTitle}>{payment.title}</Text>
-        <Text style={styles.paymentDetail}>{payment.detail}</Text>
+        <AppText style={styles.amountLabel}>AMOUNT TO PAY</AppText>
+        <AppText style={styles.amount}>{formatCurrency(payment.amount)}</AppText>
+        <AppText style={styles.paymentTitle}>{payment.title}</AppText>
+        <AppText style={styles.paymentDetail}>{payment.detail}</AppText>
         {payment.lines ? <FullPaymentBreakdown lines={payment.lines} total={payment.balance ?? payment.amount} dueNow={payment.balance != null && payment.balance !== payment.amount ? payment.amount : undefined}/> : null}
       </View>
 
       <View style={styles.card}>
-        <Text style={styles.cardLabel}>STUDENT</Text>
-        <Text style={styles.studentName}>{student.name}</Text>
-        <Text style={styles.meta}>{student.registrationNo}</Text>
-        <Text style={styles.meta}>{student.course}</Text>
+        <AppText style={styles.cardLabel}>STUDENT</AppText>
+        <AppText style={styles.studentName}>{student.name}</AppText>
+        <AppText style={styles.meta}>{student.registrationNo}</AppText>
+        <AppText style={styles.meta}>{student.course}</AppText>
       </View>
 
       {phase === 'success' && receipt ? (
         <View style={styles.successCard}>
-          <Text style={styles.successTitle}>Paid {formatCurrency(receipt.amount)}</Text>
-          <Text style={styles.successCopy}>{receipt.receiptNo ? `Receipt ${receipt.receiptNo} is ready. ` : ''}Paid on {receipt.paymentDate} with {selectedMethod.label}.</Text>
+          <AppText style={styles.successTitle}>Paid {formatCurrency(receipt.amount)}</AppText>
+          <AppText style={styles.successCopy}>{receipt.receiptNo ? `Receipt ${receipt.receiptNo} is ready. ` : ''}Paid on {receipt.paymentDate} with {selectedMethod.label}.</AppText>
           {receipt.receiptNo ? <Pressable onPress={() => { void downloadReceipt() }} style={({ pressed }) => [styles.goldButton, pressed && styles.goldPressed]}>
-            <Text style={styles.goldLabel}>Download receipt</Text>
+            <AppText style={styles.goldLabel}>Download receipt</AppText>
           </Pressable> : null}
           <Pressable onPress={onClose} style={({ pressed }) => [styles.navyButton, pressed && styles.navyPressed]}>
-            <Text style={styles.navyLabel}>Back to fees</Text>
+            <AppText style={styles.navyLabel}>Back to fees</AppText>
           </Pressable>
         </View>
       ) : (
         <>
-          <Text style={styles.methodHeading}>Pay using</Text>
+          <AppText style={styles.methodHeading}>Pay using</AppText>
           <View style={styles.methods}>
             {paymentMethods.map(item => {
               const selected = item.id === method
@@ -128,27 +129,27 @@ export function PaymentCheckoutScreen({ token, student, payment, onCancel, onRec
                   accessibilityState={{ selected }}
                   style={[styles.method, selected && styles.methodSelected]}
                 >
-                  <Text style={styles.methodLabel}>{item.label}</Text>
-                  <Text style={styles.methodHint}>{item.hint}</Text>
+                  <AppText style={styles.methodLabel}>{item.label}</AppText>
+                  <AppText style={styles.methodHint}>{item.hint}</AppText>
                 </Pressable>
               )
             })}
           </View>
 
-          {errorMessage ? <Text style={styles.error}>{errorMessage}</Text> : null}
+          {errorMessage ? <AppText style={styles.error}>{errorMessage}</AppText> : null}
 
           {phase === 'processing' ? (
             <View style={styles.processing}>
               <ActivityIndicator color={colors.navy}/>
-              <Text style={styles.processingText}>Processing payment…</Text>
+              <AppText style={styles.processingText}>Processing payment…</AppText>
             </View>
           ) : (
             <View style={styles.actions}>
               <Pressable onPress={() => { void payNow() }} style={({ pressed }) => [styles.goldButton, pressed && styles.goldPressed]}>
-                <Text style={styles.goldLabel}>{orderId ? 'Retry payment' : 'Pay now'}</Text>
+                <AppText style={styles.goldLabel}>{orderId ? 'Retry payment' : 'Pay now'}</AppText>
               </Pressable>
               <Pressable onPress={onCancel} style={({ pressed }) => [styles.cancelButton, pressed && styles.cancelPressed]}>
-                <Text style={styles.cancelLabel}>Cancel</Text>
+                <AppText style={styles.cancelLabel}>Cancel</AppText>
               </Pressable>
             </View>
           )}
@@ -159,7 +160,7 @@ export function PaymentCheckoutScreen({ token, student, payment, onCancel, onRec
 }
 
 const styles = StyleSheet.create({
-  content: { paddingHorizontal: 18, paddingTop: 10, paddingBottom: 35 },
+  content: { width: '100%', maxWidth: 760, alignSelf: 'center', paddingHorizontal: 18, paddingTop: 10, paddingBottom: 35 },
   sectionHeading: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 10, marginTop: 12, marginBottom: 11, paddingHorizontal: 12, paddingVertical: 10, borderRadius: 9, borderWidth: 1, borderColor: '#0d335f', backgroundColor: colors.navy },
   headingCopy: { flex: 1 },
   sectionTitle: { color: '#ffffff', fontSize: 18, fontWeight: '800' },

@@ -131,6 +131,7 @@ model Session {
   feeStructures FeeStructure[]
   feeAccounts   FeeAccount[]
   students      Student[]
+  studentYears  StudentYear[]
 
   @@map("sessions")
 }
@@ -187,6 +188,7 @@ model HostelRate {
   occupancy  String    @db.VarChar(30)
   annualFee  Int       @map("annual_fee")
   students   Student[]
+  studentYears StudentYear[]
 
   @@unique([condition, occupancy])
   @@map("hostel_rates")
@@ -218,11 +220,28 @@ model Student {
   admissionSemester    Semester       @relation(fields: [admissionSemesterId], references: [id])
   hostelRate           HostelRate?    @relation(fields: [hostelRateId], references: [id])
   feeAccounts          FeeAccount[]
+  academicYears        StudentYear[]
   otpChallenges        StudentOtp[]
   reminders            Reminder[]
 
   @@index([hostelRateId])
   @@map("students")
+}
+
+model StudentYear {
+  id           Int      @id @default(autoincrement())
+  studentId    Int      @map("student_id")
+  sessionId    Int      @map("session_id")
+  studyYear    Int      @map("study_year")
+  isHosteller  Boolean  @default(false) @map("is_hosteller")
+  hostelRateId Int?     @map("hostel_rate_id")
+  student      Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  session      Session  @relation(fields: [sessionId], references: [id])
+  hostelRate   HostelRate? @relation(fields: [hostelRateId], references: [id])
+
+  @@unique([studentId, sessionId])
+  @@index([sessionId, isHosteller])
+  @@map("student_years")
 }
 
 model StudentOtp {

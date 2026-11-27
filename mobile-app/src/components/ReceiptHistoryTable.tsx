@@ -1,4 +1,5 @@
-import { Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-native'
+import { Pressable, ScrollView, StyleSheet, View, useWindowDimensions } from 'react-native'
+import { AppText } from './AppText'
 import { displayPaymentMethod } from '../services/studentApi'
 import type { PaymentReceipt } from '../types/fee'
 import { colors } from '../theme/colors'
@@ -18,13 +19,13 @@ function receiptCoverageShort(receipt: PaymentReceipt) {
 
 export function ReceiptHistoryTable({ receipts, onDownload }: { receipts: PaymentReceipt[]; onDownload: (receipt: PaymentReceipt) => void }) {
   const { width } = useWindowDimensions()
-  if (!receipts.length) return <View style={styles.empty}><Text style={styles.emptyTitle}>No receipts yet</Text><Text style={styles.emptyText}>Payment receipts will appear here after a payment is confirmed.</Text></View>
+  if (!receipts.length) return <View style={styles.empty}><AppText style={styles.emptyTitle}>No receipts yet</AppText><AppText style={styles.emptyText}>Payment receipts will appear here after a payment is confirmed.</AppText></View>
 
   if (width < 600) {
     return <View style={styles.mobileList}>{receipts.map(receipt => <View key={receipt.receiptNo} style={styles.mobileCard}>
-      <View style={styles.mobileTop}><View><Text style={styles.mobileDate}>{receipt.paymentDate}</Text><Text style={styles.secondaryText}>{receiptCoverage(receipt)}</Text></View><Text style={styles.mobileAmount}>{formatCurrency(receipt.amount)}</Text></View>
-      <View style={styles.mobileReceipt}><Text style={styles.mobileLabel}>RECEIPT</Text><Text selectable style={styles.mobileReceiptNo}>{receipt.receiptNo}</Text></View>
-      <View style={styles.mobileBottom}><Text style={styles.mobileMethod}>{displayPaymentMethod(receipt.method)}</Text><Pressable onPress={() => onDownload(receipt)} style={({ pressed }) => [styles.mobileDownload, pressed && styles.downloadPressed]}><Text style={styles.downloadIcon}>↓</Text><Text style={styles.downloadText}>Download PDF</Text></Pressable></View>
+      <View style={styles.mobileTop}><View><AppText style={styles.mobileDate}>{receipt.paymentDate}</AppText><AppText style={styles.secondaryText}>{receiptCoverage(receipt)}</AppText></View><AppText style={styles.mobileAmount}>{formatCurrency(receipt.amount)}</AppText></View>
+      <View style={styles.mobileReceipt}><AppText style={styles.mobileLabel}>RECEIPT</AppText><AppText selectable style={styles.mobileReceiptNo}>{receipt.receiptNo}</AppText></View>
+      <View style={styles.mobileBottom}><AppText style={styles.mobileMethod}>{displayPaymentMethod(receipt.method)}</AppText><Pressable onPress={() => onDownload(receipt)} style={({ pressed }) => [styles.mobileDownload, pressed && styles.downloadPressed]}><AppText style={styles.downloadIcon}>↓</AppText><AppText style={styles.downloadText}>Download PDF</AppText></Pressable></View>
     </View>)}</View>
   }
 
@@ -32,18 +33,18 @@ export function ReceiptHistoryTable({ receipts, onDownload }: { receipts: Paymen
     <ScrollView horizontal showsHorizontalScrollIndicator contentContainerStyle={styles.horizontalContent}>
       <View style={styles.table}>
         <View style={styles.headerRow}>
-          <Text style={[styles.headerCell, styles.dateColumn]}>PAYMENT DATE</Text>
-          <Text style={[styles.headerCell, styles.semesterColumn]}>SEMESTER</Text>
-          <Text style={[styles.headerCell, styles.amountColumn]}>AMOUNT</Text>
-          <Text style={[styles.headerCell, styles.receiptColumn]}>RECEIPT NO.</Text>
-          <Text style={[styles.headerCell, styles.actionColumn]}>DOWNLOAD</Text>
+          <AppText style={[styles.headerCell, styles.dateColumn]}>PAYMENT DATE</AppText>
+          <AppText style={[styles.headerCell, styles.semesterColumn]}>SEMESTER</AppText>
+          <AppText style={[styles.headerCell, styles.amountColumn]}>AMOUNT</AppText>
+          <AppText style={[styles.headerCell, styles.receiptColumn]}>RECEIPT NO.</AppText>
+          <AppText style={[styles.headerCell, styles.actionColumn]}>DOWNLOAD</AppText>
         </View>
         {receipts.map((receipt, index) => <View key={receipt.receiptNo} style={[styles.bodyRow, index === receipts.length - 1 && styles.lastRow]}>
-          <Text style={[styles.bodyText, styles.dateColumn]}>{receipt.paymentDate}</Text>
-          <View style={[styles.semesterColumn, styles.semesterCell]}><Text style={styles.primaryText}>{receiptCoverageShort(receipt)}</Text><Text style={styles.secondaryText}>{displayPaymentMethod(receipt.method)}</Text></View>
-          <Text style={[styles.amountText, styles.amountColumn]}>{formatCurrency(receipt.amount)}</Text>
-          <Text style={[styles.bodyText, styles.receiptColumn]} numberOfLines={1}>{receipt.receiptNo}</Text>
-          <View style={[styles.actionColumn, styles.actionCell]}><Pressable onPress={() => onDownload(receipt)} style={({ pressed }) => [styles.downloadButton, pressed && styles.downloadPressed]}><Text style={styles.downloadIcon}>↓</Text><Text style={styles.downloadText}>Download PDF</Text></Pressable></View>
+          <AppText style={[styles.bodyText, styles.dateColumn]}>{receipt.paymentDate}</AppText>
+          <View style={[styles.semesterColumn, styles.semesterCell]}><AppText style={styles.primaryText}>{receiptCoverageShort(receipt)}</AppText><AppText style={styles.secondaryText}>{displayPaymentMethod(receipt.method)}</AppText></View>
+          <AppText style={[styles.amountText, styles.amountColumn]}>{formatCurrency(receipt.amount)}</AppText>
+          <AppText style={[styles.bodyText, styles.receiptColumn]} numberOfLines={1}>{receipt.receiptNo}</AppText>
+          <View style={[styles.actionColumn, styles.actionCell]}><Pressable onPress={() => onDownload(receipt)} style={({ pressed }) => [styles.downloadButton, pressed && styles.downloadPressed]}><AppText style={styles.downloadIcon}>↓</AppText><AppText style={styles.downloadText}>Download PDF</AppText></Pressable></View>
         </View>)}
       </View>
     </ScrollView>

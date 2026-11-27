@@ -1,10 +1,11 @@
-import { StyleSheet, Text, View } from 'react-native'
+import { StyleSheet, View } from 'react-native'
+import { AppText } from './AppText'
 import { colors } from '../theme/colors'
 
 type SummaryMetricCardProps = { label: string; value: string; suffix?: string }
 
 export function SummaryMetricCard({ label, value, suffix }: SummaryMetricCardProps) {
-  return <View style={styles.card}><Text style={styles.label}>{label}</Text><Text style={styles.value}>{value}{suffix && <Text style={styles.suffix}>{suffix}</Text>}</Text></View>
+  return <View style={styles.card}><AppText style={styles.label}>{label}</AppText><AppText style={styles.value}>{value}{suffix && <AppText style={styles.suffix}>{suffix}</AppText>}</AppText></View>
 }
 
 const styles = StyleSheet.create({

@@ -78,6 +78,7 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible{ou
 .student-tabs button,.fee-structure-tabs button,.waiver-filter-tabs button{color:#35465b;font-size:13px}
 .student-tabs button.active,.fee-structure-tabs button.active,.waiver-filter-tabs button.selected{color:var(--iccmrt-blue-deep);border-bottom-color:var(--iccmrt-blue);font-weight:700}
 .student-filter select,.student-filter>div,.waiver-course-filter select,.export-buttons button,.waiver-download-button,.waiver-prototype-tag{border-color:#9eacbb}
+.student-course-tabs,.fee-history-course-tabs,.deadline-tabs{overflow-y:hidden}
 .student-filter select:focus,.student-filter input:focus,.waiver-course-filter select:focus{border-color:var(--iccmrt-blue);outline:3px solid rgb(18 63 117 / 15%)}
 .student-fee-table td,.waiver-table td{border-top:1px solid #d5dce4}
 .student-list-title,.waiver-list-heading,.hostel-fee-heading,.reminder-history-heading{border-bottom:1px solid #c7d0da}
@@ -111,8 +112,10 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible{ou
 .legend-target{background:var(--chart-gold)}
 .progress-track span{background:var(--iccmrt-yellow)}
 .student-progress span{background:var(--iccmrt-red)}
-.student-list-title{background:var(--iccmrt-blue-deep);border-bottom-color:var(--iccmrt-navy)}
+.student-list-title{background:var(--iccmrt-blue-deep);border-bottom:3px solid var(--chart-gold)}
 .student-list-title h2,.student-list-title p{color:#fff}
+.reminder-history-heading{background:var(--iccmrt-blue-deep);border-bottom:3px solid var(--chart-gold)}
+.reminder-history-heading h2,.reminder-history-heading p{color:#fff}
 .activity-heading{background:var(--iccmrt-blue-deep);border-bottom:1px solid var(--iccmrt-navy);border-radius:8px 8px 0 0}
 .activity-heading h2,.activity-heading p{color:#fff}
 .waiver-list-heading{background:var(--iccmrt-blue-deep);border-bottom-color:var(--iccmrt-navy)}

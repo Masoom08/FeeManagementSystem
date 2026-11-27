@@ -200,6 +200,7 @@ async function getProfile(studentId) {
       batch: true,
       session: true,
       hostelRate: true,
+      academicYears: { include: { session: true, hostelRate: true }, orderBy: { studyYear: "asc" } },
       feeAccounts: {
         include: {
           ledgerEntries: {
@@ -381,6 +382,12 @@ async function getProfile(studentId) {
       batch: student.batch.label,
       session: student.session.label,
       year: student.studyYear,
+      academicYears: student.academicYears.map((year) => ({
+        session: year.session.label,
+        studyYear: year.studyYear,
+        isHosteller: year.isHosteller,
+        hostelRate: year.hostelRate ? { condition: year.hostelRate.condition, occupancy: year.hostelRate.occupancy } : null,
+      })),
     },
 
     fees: [...semesters.values()]
@@ -602,6 +609,11 @@ async function chooseHostelSeat(studentId, hostelRateId) {
     const student = await tx.student.update({
       where: { id: studentId },
       data: { hostelRateId, isHosteller: true },
+    });
+    await tx.studentYear.upsert({
+      where: { studentId_sessionId: { studentId, sessionId: student.sessionId } },
+      update: { isHosteller: true, hostelRateId },
+      create: { studentId, sessionId: student.sessionId, studyYear: student.studyYear, isHosteller: true, hostelRateId },
     });
     if (!billed) await assessStudent(tx, student, ["HOSTEL"]);
   });

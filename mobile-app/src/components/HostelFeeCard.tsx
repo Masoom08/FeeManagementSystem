@@ -1,5 +1,6 @@
 import { useState } from 'react'
-import { Pressable, StyleSheet, Text, View } from 'react-native'
+import { Pressable, StyleSheet, View } from 'react-native'
+import { AppText } from './AppText'
 import { colors } from '../theme/colors'
 import { formatCurrency } from '../utils/formatCurrency'
 
@@ -20,29 +21,29 @@ export function HostelFeeCard({ amount, onPay, seat, rates, saving, onSelect }: 
     <View style={styles.card}>
       <View style={styles.top}>
         <View style={styles.copy}>
-          <Text style={styles.title}>Hostel fees</Text>
-          <Text style={styles.detail}>{seat ? `${seat.condition} · ${seat.occupancy}` : 'No hostel seat selected'}</Text>
-          <Text style={styles.note}>A change does not alter hostel fees already billed.</Text>
+          <AppText style={styles.title}>Hostel fees</AppText>
+          <AppText style={styles.detail}>{seat ? `${seat.condition} · ${seat.occupancy}` : 'No hostel seat selected'}</AppText>
+          <AppText style={styles.note}>A change does not alter hostel fees already billed.</AppText>
         </View>
-        <Text style={styles.amount}>{formatCurrency(amount)}</Text>
+        <AppText style={styles.amount}>{formatCurrency(amount)}</AppText>
       </View>
       <Pressable onPress={() => setOpen(value => !value)} disabled={saving} style={({ pressed }) => [styles.seatButton, pressed && styles.buttonPressed]}>
-        <Text style={styles.seatButtonLabel}>{saving ? 'Saving…' : seat ? 'Change seat' : 'Choose seat'}</Text>
+        <AppText style={styles.seatButtonLabel}>{saving ? 'Saving…' : seat ? 'Change seat' : 'Choose seat'}</AppText>
       </Pressable>
       {open && <View style={styles.choices}>
         {groups.map(group => <View key={group.condition} style={styles.group}>
-          <Text style={styles.groupTitle}>{group.condition}</Text>
+          <AppText style={styles.groupTitle}>{group.condition}</AppText>
           {group.rates.map(rate => {
             const selected = seat?.id === rate.id
             return <Pressable key={rate.id} disabled={saving || selected} onPress={() => { onSelect(rate.id); setOpen(false) }} style={({ pressed }) => [styles.choice, selected && styles.choiceSelected, pressed && !selected && styles.buttonPressed]}>
-              <Text style={styles.choiceLabel}>{rate.occupancy}</Text>
-              <Text style={styles.choiceFee}>{formatCurrency(rate.annualFee)}</Text>
+              <AppText style={styles.choiceLabel}>{rate.occupancy}</AppText>
+              <AppText style={styles.choiceFee}>{formatCurrency(rate.annualFee)}</AppText>
             </Pressable>
           })}
         </View>)}
       </View>}
       <Pressable onPress={onPay} disabled={!canPay} style={({ pressed }) => [styles.button, !canPay && styles.buttonDisabled, pressed && canPay && styles.buttonPressed]}>
-        <Text style={[styles.buttonLabel, !canPay && styles.buttonLabelDisabled]}>Pay hostel fees</Text>
+        <AppText style={[styles.buttonLabel, !canPay && styles.buttonLabelDisabled]}>Pay hostel fees</AppText>
       </Pressable>
     </View>
   )

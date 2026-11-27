@@ -203,6 +203,7 @@ export type ApiStudentSummary = {
   studyYear: number
   status: string
   isHosteller: boolean
+  academicYears?: { sessionId: number; studyYear: number; isHosteller: boolean; session: { label: string }; hostelRate: { condition: string; occupancy: string } | null }[]
   duesOutstanding: number
   course: ApiStudentCourse
   batch: ApiBatch
@@ -497,6 +498,12 @@ export const api = {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),
   }),
+
+  updateStudentYear: (studentId: number, sessionId: number, isHosteller: boolean) =>
+    request(`/students/${studentId}/academic-years/${sessionId}`, {
+      method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ isHosteller }),
+    }),
 
   previewImport: (file: File) => {
     const body = new FormData()

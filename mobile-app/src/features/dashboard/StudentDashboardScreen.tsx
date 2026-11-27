@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { Alert, Keyboard, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, View } from 'react-native'
+import { Alert, Keyboard, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, View, useWindowDimensions } from 'react-native'
+import { AppText } from '../../components/AppText'
 import type { ScrollViewInstance } from 'react-native'
 import { DashboardHeader } from '../../components/DashboardHeader'
 import { HostelFeeCard, type HostelSeatChoice } from '../../components/HostelFeeCard'
@@ -17,6 +18,8 @@ import { formatCurrency } from '../../utils/formatCurrency'
 type StudentDashboardScreenProps = { token: string; student: Student; onSignOut: () => void }
 
 export function StudentDashboardScreen({ token, student, onSignOut }: StudentDashboardScreenProps) {
+  const { width } = useWindowDimensions()
+  const isWideWeb = Platform.OS === 'web' && width >= 900
   const [account, setAccount] = useState(student)
   const [fees, setFees] = useState<SemesterFee[]>([])
   const [isSidebarOpen, setIsSidebarOpen] = useState(false)
@@ -119,21 +122,28 @@ export function StudentDashboardScreen({ token, student, onSignOut }: StudentDas
     }
   }
 
+  const sidebar = (
+    <StudentSidebar
+      visible={isSidebarOpen || isWideWeb}
+      student={account}
+      onClose={() => setIsSidebarOpen(false)}
+      onSignOut={() => {
+        setIsSidebarOpen(false)
+        onSignOut()
+      }}
+    />
+  )
+
   return (
-    <>
+    <View style={[styles.shell, isWideWeb && styles.wideShell]}>
+      {isWideWeb ? sidebar : null}
+      <View style={styles.mainColumn}>
       <DashboardHeader
         firstName={account.name.split(' ')[0]}
         onOpenMenu={() => setIsSidebarOpen(true)}
+        showMenu={!isWideWeb}
       />
-      <StudentSidebar
-        visible={isSidebarOpen}
-        student={account}
-        onClose={() => setIsSidebarOpen(false)}
-        onSignOut={() => {
-          setIsSidebarOpen(false)
-          onSignOut()
-        }}
-      />
+      {!isWideWeb ? sidebar : null}
       <KeyboardAvoidingView
         style={styles.keyboardSafeArea}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
@@ -177,23 +187,23 @@ export function StudentDashboardScreen({ token, student, onSignOut }: StudentDas
                 {fees.map(fee => (
                   <View key={fee.semester} style={styles.semesterBalanceRow}>
                     <View style={styles.semesterBalanceCopy}>
-                      <Text style={styles.semesterBalanceLabel}>Semester {fee.semester}</Text>
-                      <Text style={styles.semesterBalanceDetail}>
+                      <AppText style={styles.semesterBalanceLabel}>Semester {fee.semester}</AppText>
+                      <AppText style={styles.semesterBalanceDetail}>
                         Fee {formatCurrency(fee.fee)} · Paid {formatCurrency(fee.paid)} ·{' '}
                         {fee.billed ? fee.status : 'Not billed yet'}
                         {fee.dueDate ? ` · due ${fee.dueDate}` : ''}
-                      </Text>
+                      </AppText>
                     </View>
-                    <Text style={styles.semesterBalanceAmount}>
+                    <AppText style={styles.semesterBalanceAmount}>
                       {formatCurrency(Math.max(0, fee.fee - fee.paid))}
-                    </Text>
+                    </AppText>
                   </View>
                 ))}
                 <View style={styles.semesterBalanceTotal}>
-                  <Text style={styles.semesterBalanceLabel}>Remaining balance</Text>
-                  <Text style={styles.semesterBalanceAmount}>
+                  <AppText style={styles.semesterBalanceLabel}>Remaining balance</AppText>
+                  <AppText style={styles.semesterBalanceAmount}>
                     {formatCurrency(remainingBalance)}
-                  </Text>
+                  </AppText>
                 </View>
               </View>
             ) : null} */}
@@ -208,12 +218,12 @@ export function StudentDashboardScreen({ token, student, onSignOut }: StudentDas
               <>
                 <View style={styles.sectionHeading}>
                   <View>
-                    <Text style={styles.sectionTitle}>Pay fees</Text>
-                    <Text style={styles.sectionSubtitle}>
+                    <AppText style={styles.sectionTitle}>Pay fees</AppText>
+                    <AppText style={styles.sectionSubtitle}>
                       Choose the current semester or full remaining balance
-                    </Text>
+                    </AppText>
                   </View>
-                  <Text style={styles.currencyTag}>INR</Text>
+                  <AppText style={styles.currencyTag}>INR</AppText>
                 </View>
                 <PaymentOptionsTable
                   currentFee={currentFee}
@@ -241,56 +251,60 @@ export function StudentDashboardScreen({ token, student, onSignOut }: StudentDas
                 {accountPayments
                   .filter(payment => payment.status !== 'SUCCESS')
                   .map(payment => (
-                    <Text
+                    <AppText
                       key={`${payment.reference}-${payment.status}`}
                       style={styles.paymentNotice}
                     >
                       {payment.status === 'FAILED' ? 'Failed' : 'Pending'}{' '}
                       {displayPaymentMethod(payment.method)} payment of{' '}
                       {formatCurrency(payment.amount)}
-                    </Text>
+                    </AppText>
                   ))}
                 {paymentNotice ? (
-                  <Text style={styles.paymentNotice}>{paymentNotice}</Text>
+                  <AppText style={styles.paymentNotice}>{paymentNotice}</AppText>
                 ) : null}
               </>
             ) : (
               <>
                 <View style={styles.sectionHeading}>
                   <View>
-                    <Text style={styles.sectionTitle}>Receipts</Text>
-                    <Text style={styles.sectionSubtitle}>
+                    <AppText style={styles.sectionTitle}>Receipts</AppText>
+                    <AppText style={styles.sectionSubtitle}>
                       Payment history and downloadable PDF receipts
-                    </Text>
+                    </AppText>
                   </View>
-                  <Text style={styles.receiptCount}>
+                  <AppText style={styles.receiptCount}>
                     {receipts.length} {receipts.length === 1 ? 'receipt' : 'receipts'}
-                  </Text>
+                  </AppText>
                 </View>
                 <ReceiptHistoryTable receipts={receipts} onDownload={downloadReceipt} />
               </>
             )}
 
             <View style={styles.securityNote}>
-              <Text style={styles.securityIcon}>◇</Text>
-              <Text style={styles.securityText}>
+              <AppText style={styles.securityIcon}>◇</AppText>
+              <AppText style={styles.securityText}>
                 Payments are recorded on your fee account. A receipt is ready to download after
                 the payment is confirmed.
-              </Text>
+              </AppText>
             </View>
-            <Text style={styles.footer}>
+            <AppText style={styles.footer}>
               Need help with your fees? Contact the institute accounts office.
-            </Text>
+            </AppText>
           </ScrollView>
         )}
       </KeyboardAvoidingView>
-    </>
+      </View>
+    </View>
   )
 }
 
 const styles = StyleSheet.create({
+  shell: { flex: 1 },
+  wideShell: { flexDirection: 'row' },
+  mainColumn: { flex: 1, minWidth: 0 },
   keyboardSafeArea: { flex: 1 },
-  content: { paddingHorizontal: 18, paddingTop: 10, paddingBottom: 35 },
+  content: { width: '100%', maxWidth: 1120, alignSelf: 'center', paddingHorizontal: 18, paddingTop: 10, paddingBottom: 35 },
   metrics: { flexDirection: 'row', gap: 11, marginTop: 12 },
   semesterBalances: { marginTop: 10, paddingHorizontal: 14, paddingVertical: 6, borderRadius: 12, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderLeftWidth: 4, borderLeftColor: colors.navy },
   semesterBalanceRow: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12, paddingVertical: 8 },

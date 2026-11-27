@@ -65,3 +65,21 @@
 table th,table td{border-right:1px solid #eceef3}table th:first-child,table td:first-child{border-left:1px solid #eceef3}table thead th{border-top:1px solid #eceef3}table tbody tr:last-child td{border-bottom:1px solid #eceef3}
 
 .course-collection-message{grid-column:1/-1;margin:0;padding:8px 0;color:#89889a;font-size:9px;text-align:center}
+
+.semester-trend-content{margin-top:16px;padding-top:14px;border-top:1px solid #eceef3}
+.semester-trend-svg{display:block;width:100%;height:220px;margin-top:12px;overflow:visible}
+.semester-trend-gridline{stroke:#e9edf2;stroke-dasharray:4 5;stroke-width:1}
+.semester-trend-axis-label{fill:#9299a5;font:10px 'DM Sans',sans-serif}
+.semester-trend-line{fill:none;stroke-width:3;stroke-linecap:round;stroke-linejoin:round;vector-effect:non-scaling-stroke}
+.semester-trend-line.odd{stroke:#35658f}
+.semester-trend-line.even{stroke:#eab308}
+.semester-trend-point{stroke:#fff;stroke-width:2;vector-effect:non-scaling-stroke}
+.semester-trend-point.odd{fill:#35658f}
+.semester-trend-point.even{fill:#eab308}
+.semester-trend-legend{display:flex;justify-content:center;gap:24px;margin-top:2px;color:#697589;font-size:11px}
+.semester-trend-legend span{display:flex;align-items:center;gap:7px}
+.semester-trend-legend i{width:8px;height:8px;border-radius:50%}
+.semester-trend-legend i.odd{background:#35658f}
+.semester-trend-legend i.even{background:#eab308}
+.semester-trend-message{margin:30px 0;padding:20px 0;color:#858d9a;font-size:12px;text-align:center}
+@media(max-width:600px){.semester-trend-svg{height:190px}.semester-trend-legend{gap:18px;font-size:10px}}

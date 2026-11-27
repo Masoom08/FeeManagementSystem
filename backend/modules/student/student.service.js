@@ -63,6 +63,7 @@ const studentInclude = {
   batch: true,
   session: true,
   admissionSemester: true,
+  academicYears: { include: { session: true, hostelRate: true }, orderBy: { studyYear: "asc" } },
   feeAccounts: {
     include: {
       ledgerEntries: {
@@ -171,6 +172,8 @@ async function createStudent(data) {
           studyYear,
         },
       });
+
+      await tx.studentYear.create({ data: { studentId: student.id, sessionId: student.sessionId, studyYear, isHosteller: student.isHosteller } });
 
       await assessStudent(
         tx,
@@ -336,6 +339,14 @@ async function updateStudent(id, data) {
         data: patch,
       });
 
+      if (data.isHosteller !== undefined) {
+        await tx.studentYear.upsert({
+          where: { studentId_sessionId: { studentId: id, sessionId: student.sessionId } },
+          update: { isHosteller: data.isHosteller, hostelRateId: data.isHosteller ? student.hostelRateId : null },
+          create: { studentId: id, sessionId: student.sessionId, studyYear: student.studyYear, isHosteller: data.isHosteller, hostelRateId: data.isHosteller ? student.hostelRateId : null },
+        });
+      }
+
       if (becameHosteller) {
         await assessStudent(tx, student, ["HOSTEL"]);
       }
@@ -349,6 +360,26 @@ async function updateStudent(id, data) {
   }
 
   return loadStudent(id);
+}
+
+async function updateStudentYear(id, sessionId, data) {
+  const [student, session] = await Promise.all([
+    prisma.student.findUnique({ where: { id }, include: { batch: true, course: true } }),
+    prisma.session.findUnique({ where: { id: sessionId } }),
+  ]);
+  if (!student || !session) throw notFound();
+  const studyYear = session.startDate.getUTCFullYear() - student.batch.startDate.getUTCFullYear() + 1;
+  if (studyYear < 1 || studyYear > student.course.durationYears) throw badRequest("SESSION_OUTSIDE_BATCH");
+  let hostelRateId = data.isHosteller ? data.hostelRateId : null;
+  if (hostelRateId && !(await prisma.hostelRate.findUnique({ where: { id: hostelRateId } }))) throw notFound("HOSTEL_RATE_NOT_FOUND");
+  const row = await prisma.studentYear.upsert({
+    where: { studentId_sessionId: { studentId: id, sessionId } },
+    update: { isHosteller: data.isHosteller, hostelRateId },
+    create: { studentId: id, sessionId, studyYear, isHosteller: data.isHosteller, hostelRateId },
+    include: { session: true, hostelRate: true },
+  });
+  if (student.sessionId === sessionId) await prisma.student.update({ where: { id }, data: { isHosteller: data.isHosteller, hostelRateId } });
+  return row;
 }
 
 async function archiveStudent(id) {
@@ -745,6 +776,8 @@ async function commitImport(batchId) {
         },
       });
 
+      await tx.studentYear.create({ data: { studentId: student.id, sessionId: student.sessionId, studyYear: student.studyYear, isHosteller: student.isHosteller } });
+
       await assessStudent(
         tx,
         student,
@@ -786,6 +819,7 @@ module.exports = {
   searchStudents,
   getStudent,
   updateStudent,
+  updateStudentYear,
   archiveStudent,
   previewImport,
   commitImport,

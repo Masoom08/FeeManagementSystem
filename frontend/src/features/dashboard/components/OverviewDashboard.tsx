@@ -189,7 +189,7 @@ export function OverviewDashboard({
 
   const semesterTrendMax = Math.max(0, ...semesterTrend.flatMap(month => [month.odd, month.even]))
   const chartTop = 20
-  const chartBottom = 166
+  const chartBottom = 135
   const chartLeft = 54
   const chartRight = 704
   const pointX = (index: number) => chartLeft + (index * (chartRight - chartLeft)) / (semesterTrend.length - 1)
@@ -234,8 +234,7 @@ export function OverviewDashboard({
             <span className="wave"></span>
           </h1>
           <p className="page-subtitle">
-            Manage student accounts, monitor collections, and review fee
-            activity across your institution.
+            Fee collections and student payments at a glance.
           </p>
         </div>
 
@@ -262,9 +261,7 @@ export function OverviewDashboard({
           <div className="stat-number">
             {displayAmount(summary?.totalAmountCollected)}
           </div>
-          <div className="stat-foot">
-            Successful payments recorded in the database
-          </div>
+          <div className="stat-foot">Successful collections</div>
         </article>
 
         <article className="stat-card">
@@ -278,16 +275,7 @@ export function OverviewDashboard({
           <div className="stat-number">
             {displayValue(summary?.paymentsReceived)}
           </div>
-          <div className="stat-foot">
-            Successful payment transactions
-          </div>
-          <div className="mini-bars green-bars">
-            {[42, 57, 48, 70, 52, 78, 61, 88, 69, 100, 76, 90].map(
-              (height, index) => (
-                <i key={index} style={{ height: `${height}%` }} />
-              ),
-            )}
-          </div>
+          <div className="stat-foot">Successful transactions</div>
         </article>
 
         <article className="stat-card">
@@ -307,13 +295,6 @@ export function OverviewDashboard({
             </span>{' '}
             unpaid amount
           </div>
-          <div className="mini-bars amber-bars">
-            {[70, 48, 58, 40, 66, 54, 78, 51, 92, 62, 76, 100].map(
-              (height, index) => (
-                <i key={index} style={{ height: `${height}%` }} />
-              ),
-            )}
-          </div>
         </article>
 
         <article className="stat-card">
@@ -327,12 +308,7 @@ export function OverviewDashboard({
           <div className="stat-number">
             {displayValue(summary?.totalStudentCount)}
           </div>
-          <div className="stat-foot">
-            Student records in the database
-          </div>
-          <div className="student-progress">
-            <span />
-          </div>
+          <div className="stat-foot">Student records</div>
         </article>
       </section>
 
@@ -346,8 +322,8 @@ export function OverviewDashboard({
         <article className="panel collection-panel">
           <div className="panel-heading">
             <div>
-              <h2>Collection overview</h2>
-              <p>Monthly successful academic collections by odd/even semester · last 12 months</p>
+              <h2>Semester collections</h2>
+              <p>Odd and even semester payments · last 12 months</p>
             </div>
           </div>
 
@@ -360,23 +336,6 @@ export function OverviewDashboard({
             </span>
           </div>
 
-          <div className="progress-track">
-            <span
-              style={{
-                width: courseCollections?.totalCollected ? '100%' : '0%',
-              }}
-            />
-          </div>
-
-          <div className="progress-labels">
-            <span>₹0</span>
-            <strong>
-              {courseCollections
-                ? currency.format(courseCollections.totalCollected)
-                : 'Loading...'}
-            </strong>
-          </div>
-
           <div className="semester-trend-content">
 
         {paymentHistoryError ? (
@@ -387,7 +346,7 @@ export function OverviewDashboard({
           <p className="semester-trend-message">No academic semester payments recorded in the last 12 months.</p>
         ) : (
           <>
-            <svg className="semester-trend-svg" viewBox="0 0 720 220" role="img" aria-label="Monthly fees paid for odd and even semesters over the last 12 months">
+            <svg className="semester-trend-svg" viewBox="0 0 720 190" role="img" aria-label="Monthly fees paid for odd and even semesters over the last 12 months">
               {[0, 0.5, 1].map(ratio => {
                 const y = chartBottom - ratio * (chartBottom - chartTop)
                 const value = semesterTrendMax * ratio
@@ -414,7 +373,7 @@ export function OverviewDashboard({
               ))}
 
               {semesterTrend.map((month, index) => (
-                <text key={month.key} x={pointX(index)} y="198" textAnchor="middle" className="semester-trend-axis-label">{month.label}</text>
+                <text key={month.key} x={pointX(index)} y="174" textAnchor="middle" className="semester-trend-axis-label">{month.label}</text>
               ))}
             </svg>
             <div className="semester-trend-legend" aria-label="Chart legend">
@@ -443,8 +402,8 @@ export function OverviewDashboard({
               className="fee-breakdown-link"
               onClick={onFeeStructure}
             >
-              <span>Fee collection by course</span>
-              <small>Collected across courses</small>
+              <span>Collections by course</span>
+              <small>All time</small>
             </button>
 
             <button
@@ -463,12 +422,8 @@ export function OverviewDashboard({
               style={{ background: donutBackground }}
             >
               <div>
-                <strong>
-                  {courseCollections
-                    ? currency.format(courseCollections.totalCollected)
-                    : '—'}
-                </strong>
-                <span>Total collected</span>
+                <strong>{courseCollections?.courses.length ?? '—'}</strong>
+                <span>Courses</span>
               </div>
             </div>
           </div>

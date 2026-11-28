@@ -195,7 +195,7 @@ export function DashboardPage({
           </div>
         )}
 
-        <div className="page-content">
+        <div className={`page-content${active === 'Overview' ? ' page-content-overview' : ''}`}>
           {active === 'Current fees' ? (
             <StudentFeeManagement
               onNotice={setNotice}

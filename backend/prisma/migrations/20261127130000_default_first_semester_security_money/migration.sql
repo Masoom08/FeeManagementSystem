@@ -1,4 +1,4 @@
-﻿INSERT IGNORE INTO `fee_structures`
+INSERT IGNORE INTO `fee_structures`
   (`course_id`, `session_id`, `semester_id`, `component`, `study_year`, `amount`)
 SELECT
   academic.`course_id`,

@@ -76,6 +76,35 @@ table th,table td{border-right:1px solid #eceef3}table th:first-child,table td:f
 .semester-trend-point{stroke:#fff;stroke-width:2;vector-effect:non-scaling-stroke}
 .semester-trend-point.odd{fill:#35658f}
 .semester-trend-point.even{fill:#eab308}
+
+/* Keep the overview's main metrics and charts together without extra page height. */
+.page-content-overview{padding-top:22px;padding-bottom:12px}
+.page-content-overview .welcome-row{margin-bottom:16px;align-items:center}
+.page-content-overview .welcome-row h1{margin:5px 0;font-size:24px}
+.page-content-overview .page-subtitle{margin:4px 0;font-size:11px}
+.page-content-overview .stats-grid{gap:12px}
+.page-content-overview .stat-card{height:120px;padding:13px 15px}
+.page-content-overview .stat-top{margin-bottom:8px}
+.page-content-overview .stat-icon{width:27px;height:27px}
+.page-content-overview .stat-number{font-size:21px}
+.page-content-overview .stat-foot{margin-top:4px;font-size:9px}
+.page-content-overview .mini-bars,.page-content-overview .student-progress{display:none}
+.page-content-overview .overview-grid{margin-top:12px;gap:12px}
+.page-content-overview .collection-panel,.page-content-overview .breakdown-panel{min-height:0;padding:16px 18px}
+.page-content-overview .panel-heading h2{margin-bottom:2px}
+.page-content-overview .collection-total{margin-top:11px;gap:9px}
+.page-content-overview .collection-total strong{font-size:19px}
+.page-content-overview .semester-trend-content{margin-top:11px;padding-top:10px}
+.page-content-overview .semester-trend-svg{height:185px;margin-top:8px}
+.page-content-overview .semester-trend-legend{margin-top:4px}
+.page-content-overview .donut-area{height:108px}
+.page-content-overview .donut{width:96px;height:96px}
+.page-content-overview .donut:before{inset:12px}
+.page-content-overview .donut strong{font-size:14px}
+.page-content-overview .breakdown-list{gap:7px}
+.page-content-overview .page-footer{margin-top:12px}
+@media(max-width:760px){.page-content-overview .overview-grid{grid-template-columns:1fr}.page-content-overview .collection-panel,.page-content-overview .breakdown-panel{padding:15px}.page-content-overview .semester-trend-svg{height:170px}}
+@media(min-width:1500px) and (min-height:850px){.page-content-overview{max-width:1740px;padding-inline:clamp(38px,2.8vw,72px)}.page-content-overview .stat-card{height:clamp(120px,8vw,145px);padding:clamp(13px,.9vw,18px)}.page-content-overview .stat-number{font-size:clamp(21px,1.35vw,27px)}.page-content-overview .collection-panel,.page-content-overview .breakdown-panel{padding:clamp(16px,1.1vw,22px)}.page-content-overview .semester-trend-svg{height:clamp(185px,12vw,230px)}.page-content-overview .donut-area{height:clamp(108px,7vw,132px)}.page-content-overview .donut{width:clamp(96px,6vw,120px);height:clamp(96px,6vw,120px)}}
 .semester-trend-legend{display:flex;justify-content:center;gap:24px;margin-top:2px;color:#697589;font-size:11px}
 .semester-trend-legend span{display:flex;align-items:center;gap:7px}
 .semester-trend-legend i{width:8px;height:8px;border-radius:50%}

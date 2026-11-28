@@ -1,8 +1,8 @@
-﻿ALTER TABLE `fee_structures`
-  MODIFY `component` ENUM('ACADEMIC_FEE', 'EXAM_FEE', 'ACADEMIC_CAUTION', 'HOSTEL_FEE', 'HOSTEL_SECURITY') NOT NULL;
+ALTER TABLE `fee_structures`
+  MODIFY COLUMN `component` ENUM('ACADEMIC_FEE', 'EXAM_FEE', 'ACADEMIC_CAUTION', 'HOSTEL_FEE', 'HOSTEL_SECURITY') NOT NULL;
 
 ALTER TABLE `ledger_entries`
-  MODIFY `component` ENUM('ACADEMIC_FEE', 'EXAM_FEE', 'ACADEMIC_CAUTION', 'HOSTEL_FEE', 'HOSTEL_SECURITY') NOT NULL;
+  MODIFY COLUMN `component` ENUM('ACADEMIC_FEE', 'EXAM_FEE', 'ACADEMIC_CAUTION', 'HOSTEL_FEE', 'HOSTEL_SECURITY') NOT NULL;
 
 INSERT IGNORE INTO `fee_structures`
   (`course_id`, `session_id`, `semester_id`, `component`, `study_year`, `amount`)
